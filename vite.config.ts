@@ -1,5 +1,6 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
+import { nodePolyfills } from 'vite-plugin-node-polyfills'
 import { fileURLToPath, URL } from 'node:url'
 
 // Popup (React app) and background service worker are built as separate
@@ -8,7 +9,14 @@ export default defineConfig({
   // Relative paths: chrome-extension pages resolve against the extension root,
   // and relative URLs stay correct regardless of the generated extension id.
   base: './',
-  plugins: [react()],
+  // near-api-js/seed-phrase pulls in bip39-light etc. which import Node
+  // built-ins; polyfill only the ones actually needed for the browser.
+  plugins: [
+    react(),
+    nodePolyfills({
+      include: ['crypto', 'buffer', 'stream', 'events', 'util', 'string_decoder', 'process'],
+    }),
+  ],
   build: {
     outDir: 'dist',
     emptyOutDir: true,

@@ -4,9 +4,3 @@
 chrome.runtime.onInstalled.addListener((details) => {
   console.log('[NearPort] installed', details.reason)
 })
-
-chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
-  if (message?.type === 'PING') {
-    sendResponse({ message: 'pong' })
-  }
-})

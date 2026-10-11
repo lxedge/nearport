@@ -1,0 +1,20 @@
+:root {
+  color-scheme: dark;
+
+  --bg: #12141c;
+  --surface: #1b1e29;
+  --surface-2: #20242f;
+  --border: #2a2e3d;
+  --fg: #e8eaf2;
+  --muted: #9aa0b4;
+  --faint: #6b7185;
+  --accent: #00ec97;
+  --accent-fg: #062014;
+  --accent-soft: rgba(0, 236, 151, 0.1);
+  --accent-border: rgba(0, 236, 151, 0.25);
+  --error: #ff6b6b;
+
+  /* Popup window: fixed size, shared by every view. */
+  --popup-width: 340px;
+  --popup-height: 560px;
+}
