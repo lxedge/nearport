@@ -112,3 +112,15 @@
   color: var(--fg);
   font-weight: 600;
 }
+
+.create-named-btn {
+  padding: 12px 16px;
+  border: 1px solid var(--accent-border);
+  border-radius: 10px;
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.create-named-btn:hover {
+  background: var(--accent-soft);
+}

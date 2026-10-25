@@ -1,15 +1,33 @@
+import { useState } from 'react'
 import type { Network } from '../lib/near'
 import './Settings.css'
 
 interface SettingsProps {
   network: Network
+  implicitAddress: string
   onNetworkChange: (n: Network) => void
   onBack: () => void
   onLock: () => void
   onSignOut: () => void
 }
 
-export default function Settings({ network, onNetworkChange, onBack, onLock, onSignOut }: SettingsProps) {
+export default function Settings({
+  network,
+  implicitAddress,
+  onNetworkChange,
+  onBack,
+  onLock,
+  onSignOut,
+}: SettingsProps) {
+  const [copied, setCopied] = useState(false)
+
+  function copyImplicit() {
+    navigator.clipboard
+      .writeText(implicitAddress)
+      .then(() => setCopied(true))
+      .catch(() => {})
+  }
+
   return (
     <div className="settings">
       <header className="settings-header">
@@ -40,6 +58,14 @@ export default function Settings({ network, onNetworkChange, onBack, onLock, onS
         <span className="hint">
           {network === 'mainnet' ? 'Mainnet uses real funds.' : 'Testnet uses fake NEAR.'}
         </span>
+      </section>
+
+      <section className="group">
+        <span className="label">Implicit address</span>
+        <code className="implicit">{implicitAddress}</code>
+        <button type="button" className="copy" onClick={copyImplicit}>
+          {copied ? 'Copied' : 'Copy address'}
+        </button>
       </section>
 
       <button type="button" className="lock" onClick={onLock}>

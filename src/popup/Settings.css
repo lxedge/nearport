@@ -56,6 +56,31 @@
   color: var(--faint);
 }
 
+.implicit {
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--fg);
+  overflow-wrap: anywhere;
+  word-break: break-all;
+  padding: 12px 14px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+
+.copy {
+  padding: 8px 12px;
+  font-size: 12px;
+  color: var(--muted);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.copy:hover {
+  color: var(--fg);
+  border-color: var(--muted);
+}
+
 .lock {
   margin-top: auto;
   padding: 12px 16px;

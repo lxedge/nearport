@@ -7,12 +7,22 @@ type BalanceStatus = 'loading' | 'ready' | 'error'
 interface HomeProps {
   accountId: string
   network: Network
+  showCreateNamed: boolean
   onOpenSettings: () => void
   onOpenReceive: () => void
   onOpenSend: () => void
+  onCreateNamed: () => void
 }
 
-export default function Home({ accountId, network, onOpenSettings, onOpenReceive, onOpenSend }: HomeProps) {
+export default function Home({
+  accountId,
+  network,
+  showCreateNamed,
+  onOpenSettings,
+  onOpenReceive,
+  onOpenSend,
+  onCreateNamed,
+}: HomeProps) {
   const [balance, setBalance] = useState('—')
   const [status, setStatus] = useState<BalanceStatus>('loading')
 
@@ -61,6 +71,12 @@ export default function Home({ accountId, network, onOpenSettings, onOpenReceive
         <button type="button" onClick={onOpenSend}>Send</button>
         <button type="button" onClick={onOpenReceive}>Receive</button>
       </section>
+
+      {showCreateNamed && (
+        <button type="button" className="create-named-btn" onClick={onCreateNamed}>
+          Create a named account
+        </button>
+      )}
     </div>
   )
 }
