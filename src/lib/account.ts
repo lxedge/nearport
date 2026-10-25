@@ -24,6 +24,11 @@ export function getImplicitAddress(seedPhrase: string): string {
   return keyToImplicitAddress(parseSeedPhrase(seedPhrase).getPublicKey())
 }
 
+// The secret key string (e.g. "ed25519:...") derived from a seed phrase.
+export function getSecretKey(seedPhrase: string): string {
+  return parseSeedPhrase(seedPhrase).toString()
+}
+
 // Restores a wallet from an existing 12-word seed phrase. Returns the implicit
 // account its key controls. Throws if the phrase is not a valid mnemonic.
 export function importAccount(seedPhrase: string): CreatedAccount {

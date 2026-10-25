@@ -10,6 +10,7 @@ import Send from './screens/Send'
 import History from './screens/History'
 import CreateNamedAccount from './screens/CreateNamedAccount'
 import ChainSignatures from './screens/ChainSignatures'
+import ExportWallet from './screens/ExportWallet'
 import Settings from './screens/Settings'
 import { useWallet } from './useWallet'
 import type { CreatedAccount } from '../lib/account'
@@ -26,6 +27,7 @@ type Screen =
   | 'history'
   | 'createNamed'
   | 'chainsig'
+  | 'export'
   | 'settings'
 
 export default function App() {
@@ -147,6 +149,10 @@ export default function App() {
     )
   }
 
+  if (screen === 'export') {
+    return <ExportWallet seedPhrase={seedPhrase} onBack={() => setScreen('settings')} />
+  }
+
   if (screen === 'settings') {
     return (
       <Settings
@@ -167,6 +173,7 @@ export default function App() {
         }}
         onOpenChainSig={() => setScreen('chainsig')}
         onClaimTokens={claimTokens}
+        onOpenExport={() => setScreen('export')}
       />
     )
   }

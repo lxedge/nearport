@@ -15,6 +15,7 @@ interface SettingsProps {
   onSignOut: () => void
   onOpenChainSig: () => void
   onClaimTokens: (name: string) => Promise<string>
+  onOpenExport: () => void
 }
 
 export default function Settings({
@@ -29,6 +30,7 @@ export default function Settings({
   onSignOut,
   onOpenChainSig,
   onClaimTokens,
+  onOpenExport,
 }: SettingsProps) {
   const [copiedId, setCopiedId] = useState<string | null>(null)
   const [claimName, setClaimName] = useState('')
@@ -166,6 +168,10 @@ export default function Settings({
 
       <button type="button" className="lock" onClick={onOpenChainSig}>
         Chain signatures
+      </button>
+
+      <button type="button" className="lock" onClick={onOpenExport}>
+        Export wallet
       </button>
 
       <button type="button" className="lock spacer" onClick={onLock}>
