@@ -23,6 +23,36 @@ body.sidepanel {
   height: 100%;
 }
 
+.tabs {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.tab-content {
+  flex: 1;
+  min-height: 0;
+}
+
+.tab-bar {
+  flex-shrink: 0;
+  display: flex;
+  border-top: 1px solid var(--border);
+  background: var(--bg);
+}
+
+.tab {
+  flex: 1;
+  padding: 12px 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.tab.active {
+  color: var(--accent);
+}
+
 button {
   font: inherit;
   cursor: pointer;

@@ -7,7 +7,7 @@ export type Network = 'mainnet' | 'testnet'
 
 export const NETWORKS: Record<Network, { label: string; rpcUrl: string }> = {
   mainnet: { label: 'Mainnet', rpcUrl: 'https://rpc.mainnet.near.org' },
-  testnet: { label: 'Testnet', rpcUrl: 'https://rpc.testnet.near.org' },
+  testnet: { label: 'Testnet', rpcUrl: 'https://rpc.testnet.fastnear.com' },
 }
 
 // Balances are displayed with at most this many decimal places.

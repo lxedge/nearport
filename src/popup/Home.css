@@ -4,6 +4,7 @@
   flex-direction: column;
   padding: 16px;
   gap: 12px;
+  overflow-y: auto;
 }
 
 .account {

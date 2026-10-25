@@ -7,6 +7,7 @@ import Unlock from './Unlock'
 import Home from './Home'
 import Receive from './Receive'
 import Send from './Send'
+import History from './History'
 import CreateNamedAccount from './CreateNamedAccount'
 import ChainSignatures from './ChainSignatures'
 import Settings from './Settings'
@@ -48,6 +49,7 @@ type Screen =
   | 'home'
   | 'receive'
   | 'send'
+  | 'history'
   | 'createNamed'
   | 'chainsig'
   | 'settings'
@@ -334,15 +336,40 @@ export default function App() {
     )
   }
 
+  // Home and History are the two main tabs, shown with a bottom tab bar.
   return (
-    <Home
-      network={network}
-      accounts={[implicitAddress, ...namedAccounts[network]]}
-      activeAccountId={activeAccountId}
-      onOpenSettings={() => setScreen('settings')}
-      onOpenReceive={() => setScreen('receive')}
-      onOpenSend={() => setScreen('send')}
-      onCreateNamed={() => setScreen('createNamed')}
-    />
+    <div className="tabs">
+      <div className="tab-content">
+        {screen === 'history' ? (
+          <History accountId={activeAccountId} network={network} />
+        ) : (
+          <Home
+            network={network}
+            accounts={[implicitAddress, ...namedAccounts[network]]}
+            activeAccountId={activeAccountId}
+            onOpenSettings={() => setScreen('settings')}
+            onOpenReceive={() => setScreen('receive')}
+            onOpenSend={() => setScreen('send')}
+            onCreateNamed={() => setScreen('createNamed')}
+          />
+        )}
+      </div>
+      <nav className="tab-bar">
+        <button
+          type="button"
+          className={screen === 'home' ? 'tab active' : 'tab'}
+          onClick={() => setScreen('home')}
+        >
+          Home
+        </button>
+        <button
+          type="button"
+          className={screen === 'history' ? 'tab active' : 'tab'}
+          onClick={() => setScreen('history')}
+        >
+          History
+        </button>
+      </nav>
+    </div>
   )
 }
