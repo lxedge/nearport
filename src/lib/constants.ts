@@ -14,4 +14,10 @@ export const NEARBLOCKS_API: Record<Network, string> = {
   testnet: 'https://api-testnet.nearblocks.io',
 }
 
+// Public FastNear indexer (used for fungible-token balances).
+export const FASTNEAR_API: Record<Network, string> = {
+  mainnet: 'https://api.fastnear.com',
+  testnet: 'https://api-testnet.fastnear.com',
+}
+
 export const TESTNET_FAUCET_URL = 'https://helper.nearprotocol.com/account'

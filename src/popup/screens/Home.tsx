@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { getAccountBalances, type AccountBalances } from '../../lib/balance'
+import { getTokenBalances, type TokenBalance } from '../../lib/tokens'
 import type { Network } from '../../lib/constants'
 import './Home.css'
 
@@ -28,6 +29,8 @@ export default function Home({
 }: HomeProps) {
   const [balances, setBalances] = useState<AccountBalances | null>(null)
   const [status, setStatus] = useState<BalanceStatus>('loading')
+  const [tokens, setTokens] = useState<TokenBalance[]>([])
+  const [tokenStatus, setTokenStatus] = useState<BalanceStatus>('loading')
 
   useEffect(() => {
     let cancelled = false
@@ -45,6 +48,23 @@ export default function Home({
       cancelled = true
     }
   }, [accounts, network])
+
+  useEffect(() => {
+    let cancelled = false
+    setTokenStatus('loading')
+    getTokenBalances(activeAccountId, network)
+      .then((list) => {
+        if (cancelled) return
+        setTokens(list)
+        setTokenStatus('ready')
+      })
+      .catch(() => {
+        if (!cancelled) setTokenStatus('error')
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [activeAccountId, network])
 
   return (
     <div className="home">
@@ -111,6 +131,31 @@ export default function Home({
       <section className="quick-actions">
         <button type="button" onClick={onOpenSend}>Send</button>
         <button type="button" onClick={onOpenReceive}>Receive</button>
+      </section>
+
+      <section className="tokens">
+        <span className="label">Tokens</span>
+        {tokenStatus === 'loading' && <span className="hint">Loading tokens…</span>}
+        {tokenStatus === 'error' && <span className="hint error">Tokens unavailable</span>}
+        {tokenStatus === 'ready' && tokens.length === 0 && <span className="hint">No tokens yet</span>}
+        {tokens.length > 0 && (
+          <div className="token-list">
+            {tokens.map((t) => (
+              <div className="token-row" key={t.contractId}>
+                {t.icon ? (
+                  <img className="token-icon" src={t.icon} alt="" />
+                ) : (
+                  <span className="token-icon fallback">{t.symbol.charAt(0).toUpperCase()}</span>
+                )}
+                <div className="token-meta">
+                  <span className="token-symbol">{t.symbol}</span>
+                  <span className="token-name">{t.name}</span>
+                </div>
+                <span className="token-balance">{t.formatted}</span>
+              </div>
+            ))}
+          </div>
+        )}
       </section>
     </div>
   )
