@@ -1,7 +1,15 @@
 import { useEffect, useState, type FormEvent } from 'react'
-import { getDerivedEthereumAddress, signMessage, type ChainSignature } from '../lib/chainsig'
+import { getDerivedAddress, signMessage, type Chain, type ChainSignature, type SignatureScheme } from '../lib/chainsig'
 import type { Network } from '../lib/near'
 import './ChainSignatures.css'
+
+const CHAINS: Array<{ id: Chain; label: string }> = [
+  { id: 'ethereum', label: 'Ethereum' },
+  { id: 'bitcoin', label: 'Bitcoin' },
+  { id: 'solana', label: 'Solana' },
+  { id: 'sui', label: 'Sui' },
+  { id: 'ton', label: 'TON' },
+]
 
 interface ChainSignaturesProps {
   accountId: string
@@ -12,10 +20,11 @@ interface ChainSignaturesProps {
 
 export default function ChainSignatures({ accountId, seedPhrase, network, onBack }: ChainSignaturesProps) {
   const [path, setPath] = useState('ethereum-1')
-  const [address, setAddress] = useState('')
+  const [addresses, setAddresses] = useState<Partial<Record<Chain, string>>>({})
   const [addressStatus, setAddressStatus] = useState<'idle' | 'loading' | 'error'>('idle')
-  const [copied, setCopied] = useState(false)
+  const [copied, setCopied] = useState<string | null>(null)
   const [message, setMessage] = useState('')
+  const [scheme, setScheme] = useState<SignatureScheme>('secp256k1')
   const [signature, setSignature] = useState<ChainSignature | null>(null)
   const [signing, setSigning] = useState(false)
   const [error, setError] = useState('')
@@ -23,10 +32,12 @@ export default function ChainSignatures({ accountId, seedPhrase, network, onBack
   useEffect(() => {
     let cancelled = false
     setAddressStatus('loading')
-    getDerivedEthereumAddress(accountId, path, network)
-      .then((a) => {
+    Promise.all(
+      CHAINS.map(async (c) => [c.id, await getDerivedAddress(accountId, path, network, c.id)] as const),
+    )
+      .then((rows) => {
         if (cancelled) return
-        setAddress(a)
+        setAddresses(Object.fromEntries(rows))
         setAddressStatus('idle')
       })
       .catch(() => {
@@ -37,10 +48,10 @@ export default function ChainSignatures({ accountId, seedPhrase, network, onBack
     }
   }, [accountId, path, network])
 
-  function copyAddress() {
+  function copy(chain: Chain, value: string) {
     navigator.clipboard
-      .writeText(address)
-      .then(() => setCopied(true))
+      .writeText(value)
+      .then(() => setCopied(chain))
       .catch(() => {})
   }
 
@@ -50,8 +61,7 @@ export default function ChainSignatures({ accountId, seedPhrase, network, onBack
     setError('')
     setSigning(true)
     try {
-      const sig = await signMessage(seedPhrase, accountId, message, path, network)
-      setSignature(sig)
+      setSignature(await signMessage(seedPhrase, accountId, message, path, network, scheme))
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Signing failed.')
     } finally {
@@ -70,11 +80,11 @@ export default function ChainSignatures({ accountId, seedPhrase, network, onBack
 
       <p className="hint">
         Your NEAR account controls addresses on other chains. Each derivation path maps to a
-        different address.
+        different set of addresses.
       </p>
 
-      <label className="field">
-        <span className="field-label">Derivation path</span>
+      <label className="chainsig-field">
+        <span className="chainsig-field-label">Derivation path</span>
         <input
           type="text"
           value={path}
@@ -83,21 +93,33 @@ export default function ChainSignatures({ accountId, seedPhrase, network, onBack
         />
       </label>
 
-      <div className="address-card">
-        <span className="field-label">Ethereum address</span>
-        {addressStatus === 'loading' && <span className="muted">Deriving…</span>}
-        {addressStatus === 'error' && <span className="error">Failed to derive</span>}
-        {addressStatus === 'idle' && <code className="address-value">{address}</code>}
-        {address && (
-          <button type="button" className="copy" onClick={copyAddress}>
-            {copied ? 'Copied' : 'Copy'}
-          </button>
-        )}
+      <div className="chain-list">
+        {CHAINS.map(({ id, label }) => (
+          <div className="chain-row" key={id}>
+            <div className="chain-meta">
+              <span className="chain-label">{label}</span>
+              <code className="chain-address">
+                {addressStatus === 'loading' && '…'}
+                {addressStatus === 'error' && 'failed'}
+                {addressStatus === 'idle' && (addresses[id] ?? '')}
+              </code>
+            </div>
+            {addresses[id] && (
+              <button
+                type="button"
+                className="chain-copy"
+                onClick={() => copy(id, addresses[id]!)}
+              >
+                {copied === id ? 'Copied' : 'Copy'}
+              </button>
+            )}
+          </div>
+        ))}
       </div>
 
       <form onSubmit={submit}>
-        <label className="field">
-          <span className="field-label">Message to sign</span>
+        <label className="chainsig-field">
+          <span className="chainsig-field-label">Message to sign</span>
           <input
             type="text"
             placeholder="hello near"
@@ -106,6 +128,23 @@ export default function ChainSignatures({ accountId, seedPhrase, network, onBack
             spellCheck={false}
           />
         </label>
+
+        <div className="scheme-row">
+          <button
+            type="button"
+            className={scheme === 'secp256k1' ? 'scheme selected' : 'scheme'}
+            onClick={() => setScheme('secp256k1')}
+          >
+            secp256k1
+          </button>
+          <button
+            type="button"
+            className={scheme === 'ed25519' ? 'scheme selected' : 'scheme'}
+            onClick={() => setScheme('ed25519')}
+          >
+            ed25519
+          </button>
+        </div>
 
         {error && <span className="error">{error}</span>}
 
@@ -116,10 +155,16 @@ export default function ChainSignatures({ accountId, seedPhrase, network, onBack
 
       {signature && (
         <div className="signature">
-          <span className="field-label">Signature</span>
-          <code>r: {signature.r}</code>
-          <code>s: {signature.s}</code>
-          <code>v: {signature.recoveryId}</code>
+          <span className="chainsig-field-label">Signature</span>
+          {signature.scheme === 'secp256k1' ? (
+            <>
+              <code>r: {signature.r}</code>
+              <code>s: {signature.s}</code>
+              <code>v: {signature.recoveryId}</code>
+            </>
+          ) : (
+            <code>{signature.signature}</code>
+          )}
         </div>
       )}
     </div>
