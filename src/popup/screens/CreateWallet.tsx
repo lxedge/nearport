@@ -1,13 +1,14 @@
 import { useState } from 'react'
-import { createAccount, type CreatedAccount } from '../lib/near'
+import { createAccount, type CreatedAccount } from '../../lib/account'
 import './CreateWallet.css'
 
 interface CreateWalletProps {
   onComplete: (account: CreatedAccount) => void
   onBack: () => void
+  onOpenSidePanel: () => void
 }
 
-export default function CreateWallet({ onComplete, onBack }: CreateWalletProps) {
+export default function CreateWallet({ onComplete, onBack, onOpenSidePanel }: CreateWalletProps) {
   // Generate once per mount; stable across re-renders.
   const [account] = useState<CreatedAccount>(() => createAccount())
   const [copied, setCopied] = useState(false)
@@ -26,6 +27,15 @@ export default function CreateWallet({ onComplete, onBack }: CreateWalletProps) 
           ←
         </button>
         <h1>Back up your wallet</h1>
+        <button
+          type="button"
+          className="panel-btn"
+          onClick={onOpenSidePanel}
+          aria-label="Open side panel"
+          title="Open side panel"
+        >
+          ⧉
+        </button>
       </header>
 
       <p className="warning">

@@ -104,3 +104,17 @@ button.secondary {
 button.secondary:hover:not(:disabled) {
   border-color: var(--muted);
 }
+
+/* "Open side panel" button, shown in headers across screens. */
+.panel-btn {
+  margin-left: auto;
+  padding: 6px 10px;
+  font-size: 16px;
+  color: var(--accent);
+  border: 1px solid var(--accent-border);
+  border-radius: 8px;
+}
+
+.panel-btn:hover {
+  background: var(--accent-soft);
+}

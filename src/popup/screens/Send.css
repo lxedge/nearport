@@ -42,37 +42,6 @@
   gap: 14px;
 }
 
-.send .field {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.send .field-label {
-  font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--muted);
-}
-
-.send .field input {
-  font: inherit;
-  color: var(--fg);
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 12px 14px;
-  outline: none;
-}
-
-.send .field input:focus {
-  border-color: var(--accent);
-}
-
-.send .field input::placeholder {
-  color: var(--faint);
-}
-
 .send .error {
   font-size: 12px;
   color: var(--error);

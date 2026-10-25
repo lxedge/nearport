@@ -1,14 +1,14 @@
-import { yoctoToNear } from 'near-api-js'
-import type { Network } from './near'
+import { NEARBLOCKS_API, type Network } from './constants'
+import { formatNear } from './format'
 
-// Transaction history comes from the NearBlocks public indexer API.
-const API: Record<Network, string> = {
-  mainnet: 'https://api.nearblocks.io',
-  testnet: 'https://api-testnet.nearblocks.io',
-}
+// Transaction history has two sources:
+// 1. A local log of every transaction this wallet sends (works on both networks).
+// 2. The NearBlocks public indexer (mainnet only; its testnet indexing is stale).
+
+const HISTORY_KEY = 'txnHistory'
 
 export interface HistoryTransaction {
-  hash: string
+  hash: string // on-chain tx hash, or a local id
   timestamp: number // ms since epoch
   type: string
   counterparty: string
@@ -17,20 +17,62 @@ export interface HistoryTransaction {
   success: boolean
 }
 
+type StoredTxn = HistoryTransaction & { accountId: string; network: Network }
+
 interface RawTxn {
   transaction_hash: string
-  block_timestamp: string // nanoseconds since epoch
+  block_timestamp: string
   predecessor_account_id: string
   receiver_account_id: string
   receipt_outcome?: { status: boolean }
   actions?: Array<{ action: string; method?: string; deposit?: string }>
 }
 
-export async function fetchTransactions(
+// Records a locally-sent transaction, so history works without an indexer.
+export async function recordTransaction(
+  accountId: string,
+  network: Network,
+  entry: Omit<HistoryTransaction, 'hash' | 'timestamp'> & { hash?: string },
+): Promise<void> {
+  const stored: StoredTxn = {
+    ...entry,
+    hash: entry.hash ?? crypto.randomUUID(),
+    timestamp: Date.now(),
+    accountId,
+    network,
+  }
+  const data = await chrome.storage.local.get(HISTORY_KEY)
+  const list: StoredTxn[] = Array.isArray(data[HISTORY_KEY]) ? data[HISTORY_KEY] : []
+  list.unshift(stored)
+  await chrome.storage.local.set({ [HISTORY_KEY]: list.slice(0, 200) })
+}
+
+// Merges local transactions with the indexer (when available), newest first.
+export async function getHistory(
   accountId: string,
   network: Network,
 ): Promise<HistoryTransaction[]> {
-  const res = await fetch(`${API[network]}/v1/account/${accountId}/txns?per_page=20`)
+  const data = await chrome.storage.local.get(HISTORY_KEY)
+  const list: StoredTxn[] = Array.isArray(data[HISTORY_KEY]) ? data[HISTORY_KEY] : []
+  const local = list.filter((t) => t.accountId === accountId && t.network === network)
+
+  let indexer: HistoryTransaction[] = []
+  try {
+    indexer = await fetchTransactions(accountId, network)
+  } catch {
+    // Indexer unavailable; local history still works.
+  }
+
+  const localHashes = new Set(local.map((t) => t.hash))
+  const merged = [...local, ...indexer.filter((t) => !localHashes.has(t.hash))]
+  return merged.sort((a, b) => b.timestamp - a.timestamp)
+}
+
+async function fetchTransactions(
+  accountId: string,
+  network: Network,
+): Promise<HistoryTransaction[]> {
+  const res = await fetch(`${NEARBLOCKS_API[network]}/v1/account/${accountId}/txns?per_page=20`)
   if (!res.ok) throw new Error(`History unavailable (${res.status})`)
   const data = (await res.json()) as { txns: RawTxn[] }
   return data.txns.map((t) => mapTxn(t, accountId))
@@ -44,7 +86,7 @@ function mapTxn(t: RawTxn, accountId: string): HistoryTransaction {
     timestamp: Math.floor(Number(t.block_timestamp) / 1_000_000),
     type: transfer ? 'Transfer' : actionLabel(t.actions?.[0]?.action, t.actions?.[0]?.method),
     counterparty: outgoing ? t.receiver_account_id : t.predecessor_account_id,
-    amountNear: transfer?.deposit ? yoctoToNear(BigInt(transfer.deposit), 6) : null,
+    amountNear: transfer?.deposit ? formatNear(BigInt(transfer.deposit)) : null,
     direction: outgoing ? 'out' : 'in',
     success: t.receipt_outcome?.status ?? true,
   }

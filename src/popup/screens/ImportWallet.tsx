@@ -1,5 +1,5 @@
 import { useRef, useState, type FormEvent, type KeyboardEvent } from 'react'
-import { importAccount, type CreatedAccount } from '../lib/near'
+import { importAccount, type CreatedAccount } from '../../lib/account'
 import './ImportWallet.css'
 
 const WORD_COUNT = 12
@@ -7,9 +7,10 @@ const WORD_COUNT = 12
 interface ImportWalletProps {
   onComplete: (account: CreatedAccount) => void
   onBack: () => void
+  onOpenSidePanel: () => void
 }
 
-export default function ImportWallet({ onComplete, onBack }: ImportWalletProps) {
+export default function ImportWallet({ onComplete, onBack, onOpenSidePanel }: ImportWalletProps) {
   const [words, setWords] = useState<string[]>(() => Array(WORD_COUNT).fill(''))
   const [error, setError] = useState('')
   const inputsRef = useRef<(HTMLInputElement | null)[]>([])
@@ -63,6 +64,15 @@ export default function ImportWallet({ onComplete, onBack }: ImportWalletProps) 
           ←
         </button>
         <h1>Import wallet</h1>
+        <button
+          type="button"
+          className="panel-btn"
+          onClick={onOpenSidePanel}
+          aria-label="Open side panel"
+          title="Open side panel"
+        >
+          ⧉
+        </button>
       </header>
 
       <p className="hint">

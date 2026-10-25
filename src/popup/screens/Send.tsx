@@ -1,6 +1,9 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { nearToYocto } from 'near-api-js'
-import { getBalance, sendNear, type Network } from '../lib/near'
+import { getBalance } from '../../lib/balance'
+import { sendNear } from '../../lib/transfer'
+import type { Network } from '../../lib/constants'
+import { isValidAccountId } from '../../lib/format'
 import './Send.css'
 
 interface SendProps {
@@ -12,15 +15,6 @@ interface SendProps {
 
 type BalanceStatus = 'loading' | 'ready' | 'error'
 type SendStatus = 'idle' | 'sending' | 'sent'
-
-// NEAR account id: 2-64 chars. Either an implicit account (64 lowercase hex
-// chars) or a named account whose dot-separated segments are lowercase
-// alphanumerics with `-`/`_` only between alphanumeric runs.
-function isValidAccountId(id: string): boolean {
-  if (id.length < 2 || id.length > 64) return false
-  if (/^[0-9a-f]{64}$/.test(id)) return true
-  return id.split('.').every((seg) => /^[a-z0-9]+([-_][a-z0-9]+)*$/.test(seg))
-}
 
 export default function Send({ accountId, seedPhrase, network, onBack }: SendProps) {
   const [receiver, setReceiver] = useState('')

@@ -4,9 +4,10 @@ import './SetPassword.css'
 interface SetPasswordProps {
   onSubmit: (password: string) => void
   onBack: () => void
+  onOpenSidePanel: () => void
 }
 
-export default function SetPassword({ onSubmit, onBack }: SetPasswordProps) {
+export default function SetPassword({ onSubmit, onBack, onOpenSidePanel }: SetPasswordProps) {
   const [password, setPassword] = useState('')
   const [confirm, setConfirm] = useState('')
   const [error, setError] = useState('')
@@ -35,6 +36,15 @@ export default function SetPassword({ onSubmit, onBack }: SetPasswordProps) {
           ←
         </button>
         <h1>Set a password</h1>
+        <button
+          type="button"
+          className="panel-btn"
+          onClick={onOpenSidePanel}
+          aria-label="Open side panel"
+          title="Open side panel"
+        >
+          ⧉
+        </button>
       </header>
 
       <p className="hint">

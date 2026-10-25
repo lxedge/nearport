@@ -36,19 +36,6 @@
   gap: 14px;
 }
 
-.create-named .field {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.create-named .field-label {
-  font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--muted);
-}
-
 .create-named .name-input {
   display: flex;
   align-items: center;

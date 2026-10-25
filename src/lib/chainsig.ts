@@ -5,7 +5,8 @@ import { sha256 } from '@noble/hashes/sha2.js'
 import { ripemd160 } from '@noble/hashes/legacy.js'
 import { blake2b } from '@noble/hashes/blake2.js'
 import { bytesToHex } from '@noble/hashes/utils.js'
-import { NETWORKS, type Network } from './near'
+import { NETWORKS, type Network } from './constants'
+import { recordTransaction } from './history'
 
 // NEAR chain signatures: a NEAR account can control accounts on other chains
 // (Ethereum, Bitcoin, Solana, Sui, TON, …) by requesting signatures from the MPC
@@ -91,6 +92,7 @@ export async function signPayload(
   const keyPair = parseSeedPhrase(seedPhrase)
   const account = new Account(accountId, NETWORKS[network].rpcUrl, keyPair.toString())
 
+  let signature: ChainSignature
   if (scheme === 'secp256k1') {
     const result = await account.callFunction<Secp256k1SignResponse>({
       contractId: MPC_CONTRACTS[network],
@@ -99,22 +101,31 @@ export async function signPayload(
       deposit: SIGN_DEPOSIT,
       gas: SIGN_GAS,
     })
-    return {
+    signature = {
       scheme: 'secp256k1',
       r: result.big_r.affine_point.slice(2), // drop the 02/03 parity prefix byte
       s: result.s.scalar,
       recoveryId: result.recovery_id,
     }
+  } else {
+    const result = await account.callFunction<Ed25519SignResponse>({
+      contractId: MPC_CONTRACTS[network],
+      methodName: 'sign',
+      args: { request: { payload_v2: { Eddsa: bytesToHex(payload) }, path, domain_id: 1 } },
+      deposit: SIGN_DEPOSIT,
+      gas: SIGN_GAS,
+    })
+    signature = { scheme: 'ed25519', signature: bytesToHex(Uint8Array.from(result.signature)) }
   }
 
-  const result = await account.callFunction<Ed25519SignResponse>({
-    contractId: MPC_CONTRACTS[network],
-    methodName: 'sign',
-    args: { request: { payload_v2: { Eddsa: bytesToHex(payload) }, path, domain_id: 1 } },
-    deposit: SIGN_DEPOSIT,
-    gas: SIGN_GAS,
+  await recordTransaction(accountId, network, {
+    type: 'Chain signature',
+    counterparty: path,
+    amountNear: null,
+    direction: 'out',
+    success: true,
   })
-  return { scheme: 'ed25519', signature: bytesToHex(Uint8Array.from(result.signature)) }
+  return signature
 }
 
 // --- internal helpers ---

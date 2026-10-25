@@ -1,10 +1,18 @@
 .welcome {
+  position: relative;
   height: 100%;
   padding: 24px 20px;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
+}
+
+.welcome .panel-btn {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  margin-left: 0;
 }
 
 .brand {

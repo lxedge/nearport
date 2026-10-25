@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
-import { getAccountBalances, type AccountBalances, type Network } from '../lib/near'
+import { getAccountBalances, type AccountBalances } from '../../lib/balance'
+import type { Network } from '../../lib/constants'
 import './Home.css'
 
 type BalanceStatus = 'loading' | 'ready' | 'error'
@@ -9,6 +10,7 @@ interface HomeProps {
   accounts: string[]
   activeAccountId: string
   onOpenSettings: () => void
+  onOpenSidePanel: () => void
   onOpenReceive: () => void
   onOpenSend: () => void
   onCreateNamed: () => void
@@ -19,6 +21,7 @@ export default function Home({
   accounts,
   activeAccountId,
   onOpenSettings,
+  onOpenSidePanel,
   onOpenReceive,
   onOpenSend,
   onCreateNamed,
@@ -53,6 +56,15 @@ export default function Home({
             {accounts.length} account{accounts.length === 1 ? '' : 's'}
           </span>
         </div>
+        <button
+          type="button"
+          className="panel-btn"
+          onClick={onOpenSidePanel}
+          aria-label="Open side panel"
+          title="Open side panel"
+        >
+          ⧉
+        </button>
         <button type="button" className="settings-btn" onClick={onOpenSettings} aria-label="Settings">
           ⚙
         </button>

@@ -3,11 +3,21 @@ import './Welcome.css'
 interface WelcomeProps {
   onCreate: () => void
   onImport: () => void
+  onOpenSidePanel: () => void
 }
 
-export default function Welcome({ onCreate, onImport }: WelcomeProps) {
+export default function Welcome({ onCreate, onImport, onOpenSidePanel }: WelcomeProps) {
   return (
     <div className="welcome">
+      <button
+        type="button"
+        className="panel-btn"
+        onClick={onOpenSidePanel}
+        aria-label="Open side panel"
+        title="Open side panel"
+      >
+        ⧉
+      </button>
       <div className="brand">
         <div className="logo">◈</div>
         <h1>NearPort</h1>

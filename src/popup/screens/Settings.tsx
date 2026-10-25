@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import type { Network } from '../lib/near'
+import type { Network } from '../../lib/constants'
+import { isValidAccountName } from '../../lib/format'
 import './Settings.css'
 
 interface SettingsProps {
@@ -14,10 +15,6 @@ interface SettingsProps {
   onSignOut: () => void
   onOpenChainSig: () => void
   onClaimTokens: (name: string) => Promise<string>
-}
-
-function isValidName(name: string): boolean {
-  return /^[a-z0-9]+([-_][a-z0-9]+)*$/.test(name)
 }
 
 export default function Settings({
@@ -46,20 +43,11 @@ export default function Settings({
       .catch(() => {})
   }
 
-  function openSidePanel() {
-    chrome.windows
-      .getCurrent()
-      .then((win) => {
-        if (typeof win.id === 'number') chrome.sidePanel.open({ windowId: win.id })
-      })
-      .catch(() => {})
-  }
-
   async function claim() {
     if (claimBusy) return
     const name = claimName.trim()
     if (name.length === 0) return
-    if (!isValidName(name)) {
+    if (!isValidAccountName(name)) {
       setClaimError('Use lowercase letters, numbers, and - or _.')
       return
     }
@@ -175,10 +163,6 @@ export default function Settings({
           </button>
         </section>
       )}
-
-      <button type="button" className="lock" onClick={openSidePanel}>
-        Open side panel
-      </button>
 
       <button type="button" className="lock" onClick={onOpenChainSig}>
         Chain signatures

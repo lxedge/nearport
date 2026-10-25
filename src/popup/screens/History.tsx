@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
-import { fetchTransactions, type HistoryTransaction } from '../lib/history'
-import type { Network } from '../lib/near'
+import { getHistory, type HistoryTransaction } from '../../lib/history'
+import type { Network } from '../../lib/constants'
 import './History.css'
 
 interface HistoryProps {
@@ -23,7 +23,7 @@ export default function History({ accountId, network }: HistoryProps) {
   useEffect(() => {
     let cancelled = false
     setStatus('loading')
-    fetchTransactions(accountId, network)
+    getHistory(accountId, network)
       .then((list) => {
         if (cancelled) return
         setTxns(list)

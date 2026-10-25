@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react'
-import { getDerivedAddress, signMessage, type Chain, type ChainSignature, type SignatureScheme } from '../lib/chainsig'
-import type { Network } from '../lib/near'
+import { getDerivedAddress, signMessage, type Chain, type ChainSignature, type SignatureScheme } from '../../lib/chainsig'
+import type { Network } from '../../lib/constants'
 import './ChainSignatures.css'
 
 const CHAINS: Array<{ id: Chain; label: string }> = [
@@ -83,8 +83,8 @@ export default function ChainSignatures({ accountId, seedPhrase, network, onBack
         different set of addresses.
       </p>
 
-      <label className="chainsig-field">
-        <span className="chainsig-field-label">Derivation path</span>
+      <label className="field">
+        <span className="field-label">Derivation path</span>
         <input
           type="text"
           value={path}
@@ -118,8 +118,8 @@ export default function ChainSignatures({ accountId, seedPhrase, network, onBack
       </div>
 
       <form onSubmit={submit}>
-        <label className="chainsig-field">
-          <span className="chainsig-field-label">Message to sign</span>
+        <label className="field">
+          <span className="field-label">Message to sign</span>
           <input
             type="text"
             placeholder="hello near"
@@ -155,7 +155,7 @@ export default function ChainSignatures({ accountId, seedPhrase, network, onBack
 
       {signature && (
         <div className="signature">
-          <span className="chainsig-field-label">Signature</span>
+          <span className="field-label">Signature</span>
           {signature.scheme === 'secp256k1' ? (
             <>
               <code>r: {signature.r}</code>

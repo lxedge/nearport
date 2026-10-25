@@ -26,37 +26,6 @@
   color: var(--muted);
 }
 
-.chainsig-field {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.chainsig-field-label {
-  font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--muted);
-}
-
-.chainsig-field input {
-  font: inherit;
-  color: var(--fg);
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 12px 14px;
-  outline: none;
-}
-
-.chainsig-field input:focus {
-  border-color: var(--accent);
-}
-
-.chainsig-field input::placeholder {
-  color: var(--faint);
-}
-
 .chain-list {
   display: flex;
   flex-direction: column;

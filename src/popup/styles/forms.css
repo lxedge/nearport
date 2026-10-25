@@ -1,0 +1,34 @@
+/* Shared form primitives. The boxed `.field > input` targets inputs that are a
+ * direct child of `.field` (Send, Chain signatures); boxed-with-suffix inputs
+ * (`.name-input`) keep their own transparent input styling. */
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.field-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+}
+
+.field > input {
+  font: inherit;
+  color: var(--fg);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px 14px;
+  outline: none;
+}
+
+.field > input:focus {
+  border-color: var(--accent);
+}
+
+.field > input::placeholder {
+  color: var(--faint);
+}

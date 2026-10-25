@@ -1,5 +1,7 @@
 import { useState, type FormEvent } from 'react'
-import { createNamedAccount, type Network } from '../lib/near'
+import { createNamedAccount } from '../../lib/named-account'
+import type { Network } from '../../lib/constants'
+import { isValidAccountName } from '../../lib/format'
 import './CreateNamedAccount.css'
 
 const DEPOSIT_NEAR = '0.1'
@@ -10,12 +12,6 @@ interface CreateNamedAccountProps {
   funderAccountId: string
   onComplete: (accountId: string) => void
   onBack: () => void
-}
-
-// One dot-separated segment of a NEAR named account: lowercase alphanumerics
-// with `-`/`_` only between alphanumeric runs.
-function isValidName(name: string): boolean {
-  return /^[a-z0-9]+([-_][a-z0-9]+)*$/.test(name)
 }
 
 export default function CreateNamedAccount({
@@ -43,7 +39,7 @@ export default function CreateNamedAccount({
       setError('Account name is too long.')
       return
     }
-    if (!isValidName(trimmed)) {
+    if (!isValidAccountName(trimmed)) {
       setError('Use lowercase letters, numbers, and - or _.')
       return
     }
