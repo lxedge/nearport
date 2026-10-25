@@ -14,7 +14,6 @@ interface HomeProps {
   onOpenAddresses: () => void
   onOpenReceive: () => void
   onOpenSend: () => void
-  onCreateNamed: () => void
 }
 
 export default function Home({
@@ -26,7 +25,6 @@ export default function Home({
   onOpenAddresses,
   onOpenReceive,
   onOpenSend,
-  onCreateNamed,
 }: HomeProps) {
   const [balances, setBalances] = useState<AccountBalances | null>(null)
   const [status, setStatus] = useState<BalanceStatus>('loading')
@@ -114,10 +112,6 @@ export default function Home({
         <button type="button" onClick={onOpenSend}>Send</button>
         <button type="button" onClick={onOpenReceive}>Receive</button>
       </section>
-
-      <button type="button" className="create-named-btn" onClick={onCreateNamed}>
-        Create a named account
-      </button>
     </div>
   )
 }

@@ -8,7 +8,6 @@ import Home from './screens/Home'
 import Receive from './screens/Receive'
 import Send from './screens/Send'
 import History from './screens/History'
-import CreateNamedAccount from './screens/CreateNamedAccount'
 import ChainSignatures from './screens/ChainSignatures'
 import Addresses from './screens/Addresses'
 import ExportWallet from './screens/ExportWallet'
@@ -27,7 +26,6 @@ type Screen =
   | 'send'
   | 'history'
   | 'addresses'
-  | 'createNamed'
   | 'chainsig'
   | 'export'
   | 'settings'
@@ -72,7 +70,6 @@ export default function App() {
     setNetwork,
     setChainPath,
     switchAccount,
-    createNamed,
     claimTokens,
     openSidePanel,
   } = wallet
@@ -125,21 +122,6 @@ export default function App() {
 
   if (screen === 'receive') {
     return <Receive accountId={activeAccountId!} onBack={() => setScreen('home')} />
-  }
-
-  if (screen === 'createNamed') {
-    return (
-      <CreateNamedAccount
-        network={network}
-        seedPhrase={seedPhrase}
-        funderAccountId={activeAccountId!}
-        onComplete={async (id) => {
-          await createNamed(network, id)
-          setScreen('home')
-        }}
-        onBack={() => setScreen('home')}
-      />
-    )
   }
 
   if (screen === 'addresses') {
@@ -224,7 +206,6 @@ export default function App() {
             onOpenAddresses={() => setScreen('addresses')}
             onOpenReceive={() => setScreen('receive')}
             onOpenSend={() => setScreen('send')}
-            onCreateNamed={() => setScreen('createNamed')}
           />
         )}
       </div>

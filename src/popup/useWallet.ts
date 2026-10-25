@@ -227,10 +227,6 @@ export function useWallet() {
     }
   }
 
-  async function createNamed(net: Network, accountId: string) {
-    await addAccount(net, accountId)
-  }
-
   // Claims free test tokens by creating a funded `.testnet` account via the
   // faucet, then adds it to the wallet. Returns the new account id.
   async function claimTokens(name: string): Promise<string> {
@@ -269,7 +265,6 @@ export function useWallet() {
     setNetwork,
     setChainPath,
     switchAccount,
-    createNamed,
     claimTokens,
     openSidePanel,
   }
