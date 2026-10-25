@@ -7,6 +7,7 @@ import Home from './Home'
 import Receive from './Receive'
 import Send from './Send'
 import CreateNamedAccount from './CreateNamedAccount'
+import ChainSignatures from './ChainSignatures'
 import Settings from './Settings'
 import { decryptSeedPhrase, encryptSeedPhrase } from '../lib/crypto'
 import { getImplicitAddress, type Network, type CreatedAccount } from '../lib/near'
@@ -46,6 +47,7 @@ type Screen =
   | 'receive'
   | 'send'
   | 'createNamed'
+  | 'chainsig'
   | 'settings'
 
 export default function App() {
@@ -262,6 +264,17 @@ export default function App() {
     )
   }
 
+  if (screen === 'chainsig') {
+    return (
+      <ChainSignatures
+        accountId={activeAccountId}
+        seedPhrase={seedPhrase}
+        network={network}
+        onBack={() => setScreen('settings')}
+      />
+    )
+  }
+
   if (screen === 'settings') {
     return (
       <Settings
@@ -274,6 +287,7 @@ export default function App() {
         onBack={() => setScreen('home')}
         onLock={handleLock}
         onSignOut={handleSignOut}
+        onOpenChainSig={() => setScreen('chainsig')}
       />
     )
   }

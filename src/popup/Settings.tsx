@@ -12,6 +12,7 @@ interface SettingsProps {
   onBack: () => void
   onLock: () => void
   onSignOut: () => void
+  onOpenChainSig: () => void
 }
 
 export default function Settings({
@@ -24,13 +25,14 @@ export default function Settings({
   onBack,
   onLock,
   onSignOut,
+  onOpenChainSig,
 }: SettingsProps) {
-  const [copied, setCopied] = useState(false)
+  const [copiedId, setCopiedId] = useState<string | null>(null)
 
-  function copyImplicit() {
+  function copyAccount(id: string) {
     navigator.clipboard
-      .writeText(implicitAddress)
-      .then(() => setCopied(true))
+      .writeText(id)
+      .then(() => setCopiedId(id))
       .catch(() => {})
   }
 
@@ -70,36 +72,43 @@ export default function Settings({
         <section className="group">
           <span className="label">Account</span>
           <div className="account-list">
-            <button
-              type="button"
-              className={activeAccount === null ? 'account-option selected' : 'account-option'}
-              onClick={() => onSwitchAccount(null)}
-            >
-              Implicit · {implicitAddress.slice(0, 10)}…{implicitAddress.slice(-6)}
-            </button>
-            {accounts.map((id) => (
-              <button
-                key={id}
-                type="button"
-                className={id === activeAccount ? 'account-option selected' : 'account-option'}
-                onClick={() => onSwitchAccount(id)}
-              >
-                {id}
+            <div className={activeAccount === null ? 'account-item selected' : 'account-item'}>
+              <button type="button" className="account-select" onClick={() => onSwitchAccount(null)}>
+                Implicit · {implicitAddress.slice(0, 10)}…{implicitAddress.slice(-6)}
               </button>
+              <button
+                type="button"
+                className="account-copy"
+                onClick={() => copyAccount(implicitAddress)}
+                aria-label="Copy implicit address"
+              >
+                {copiedId === implicitAddress ? 'Copied' : 'Copy'}
+              </button>
+            </div>
+            {accounts.map((id) => (
+              <div className={id === activeAccount ? 'account-item selected' : 'account-item'} key={id}>
+                <button type="button" className="account-select" onClick={() => onSwitchAccount(id)}>
+                  {id}
+                </button>
+                <button
+                  type="button"
+                  className="account-copy"
+                  onClick={() => copyAccount(id)}
+                  aria-label={`Copy ${id}`}
+                >
+                  {copiedId === id ? 'Copied' : 'Copy'}
+                </button>
+              </div>
             ))}
           </div>
         </section>
       )}
 
-      <section className="group">
-        <span className="label">Implicit address</span>
-        <code className="implicit">{implicitAddress}</code>
-        <button type="button" className="copy" onClick={copyImplicit}>
-          {copied ? 'Copied' : 'Copy address'}
-        </button>
-      </section>
+      <button type="button" className="lock" onClick={onOpenChainSig}>
+        Chain signatures
+      </button>
 
-      <button type="button" className="lock" onClick={onLock}>
+      <button type="button" className="lock spacer" onClick={onLock}>
         Lock wallet
       </button>
 
