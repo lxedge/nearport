@@ -5,10 +5,11 @@ interface SettingsProps {
   network: Network
   onNetworkChange: (n: Network) => void
   onBack: () => void
+  onLock: () => void
   onSignOut: () => void
 }
 
-export default function Settings({ network, onNetworkChange, onBack, onSignOut }: SettingsProps) {
+export default function Settings({ network, onNetworkChange, onBack, onLock, onSignOut }: SettingsProps) {
   return (
     <div className="settings">
       <header className="settings-header">
@@ -40,6 +41,10 @@ export default function Settings({ network, onNetworkChange, onBack, onSignOut }
           {network === 'mainnet' ? 'Mainnet uses real funds.' : 'Testnet uses fake NEAR.'}
         </span>
       </section>
+
+      <button type="button" className="lock" onClick={onLock}>
+        Lock wallet
+      </button>
 
       <button type="button" className="danger" onClick={onSignOut}>
         Sign out

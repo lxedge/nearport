@@ -8,9 +8,11 @@ interface HomeProps {
   accountId: string
   network: Network
   onOpenSettings: () => void
+  onOpenReceive: () => void
+  onOpenSend: () => void
 }
 
-export default function Home({ accountId, network, onOpenSettings }: HomeProps) {
+export default function Home({ accountId, network, onOpenSettings, onOpenReceive, onOpenSend }: HomeProps) {
   const [balance, setBalance] = useState('—')
   const [status, setStatus] = useState<BalanceStatus>('loading')
 
@@ -56,8 +58,8 @@ export default function Home({ accountId, network, onOpenSettings }: HomeProps) 
       </section>
 
       <section className="quick-actions">
-        <button type="button" disabled>Send</button>
-        <button type="button" disabled>Receive</button>
+        <button type="button" onClick={onOpenSend}>Send</button>
+        <button type="button" onClick={onOpenReceive}>Receive</button>
       </section>
     </div>
   )

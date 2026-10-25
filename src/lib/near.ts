@@ -1,5 +1,5 @@
-import { generateSeedPhrase } from 'near-api-js/seed-phrase'
-import { keyToImplicitAddress, JsonRpcProvider, yoctoToNear } from 'near-api-js'
+import { generateSeedPhrase, parseSeedPhrase } from 'near-api-js/seed-phrase'
+import { Account, keyToImplicitAddress, JsonRpcProvider, nearToYocto, yoctoToNear } from 'near-api-js'
 
 export type Network = 'mainnet' | 'testnet'
 
@@ -42,4 +42,21 @@ export async function getBalance(accountId: string, network: Network): Promise<s
 function isUnknownAccount(err: unknown): boolean {
   const msg = err instanceof Error ? err.message : String(err)
   return /does not exist|UNKNOWN_ACCOUNT/i.test(msg)
+}
+
+// Sends NEAR from the wallet's account to `receiverId`, signing the transaction
+// with the key derived from the stored seed phrase. Returns the transaction hash.
+// `amountNear` must already be a valid, positive decimal NEAR amount (the caller
+// validates it); nearToYocto converts it and throws on malformed input.
+export async function sendNear(
+  seedPhrase: string,
+  accountId: string,
+  receiverId: string,
+  amountNear: string,
+  network: Network,
+): Promise<string> {
+  const keyPair = parseSeedPhrase(seedPhrase)
+  const account = new Account(accountId, NETWORKS[network].rpcUrl, keyPair.toString())
+  const result = await account.transfer({ receiverId, amount: nearToYocto(amountNear as `${number}`) })
+  return result.transaction_outcome.id
 }
