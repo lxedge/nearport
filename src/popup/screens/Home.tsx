@@ -11,6 +11,7 @@ interface HomeProps {
   activeAccountId: string
   onOpenSettings: () => void
   onOpenSidePanel: () => void
+  onOpenAddresses: () => void
   onOpenReceive: () => void
   onOpenSend: () => void
   onCreateNamed: () => void
@@ -22,6 +23,7 @@ export default function Home({
   activeAccountId,
   onOpenSettings,
   onOpenSidePanel,
+  onOpenAddresses,
   onOpenReceive,
   onOpenSend,
   onCreateNamed,
@@ -49,13 +51,22 @@ export default function Home({
   return (
     <div className="home">
       <header className="account">
-        <div className="avatar">◈</div>
-        <div className="account-meta">
-          <span className="account-id">{network === 'mainnet' ? 'Mainnet' : 'Testnet'}</span>
-          <span className="account-tag">
-            {accounts.length} account{accounts.length === 1 ? '' : 's'}
+        <button
+          type="button"
+          className="account-toggle"
+          onClick={onOpenAddresses}
+          aria-label="View all addresses"
+          title="View all addresses"
+        >
+          <span className="avatar">◈</span>
+          <span className="account-meta">
+            <span className="account-id">{network === 'mainnet' ? 'Mainnet' : 'Testnet'}</span>
+            <span className="account-tag">
+              {accounts.length} account{accounts.length === 1 ? '' : 's'}
+            </span>
           </span>
-        </div>
+          <span className="chevron">▾</span>
+        </button>
         <button
           type="button"
           className="panel-btn"

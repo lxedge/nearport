@@ -10,6 +10,7 @@ import Send from './screens/Send'
 import History from './screens/History'
 import CreateNamedAccount from './screens/CreateNamedAccount'
 import ChainSignatures from './screens/ChainSignatures'
+import Addresses from './screens/Addresses'
 import ExportWallet from './screens/ExportWallet'
 import Settings from './screens/Settings'
 import { useWallet } from './useWallet'
@@ -25,6 +26,7 @@ type Screen =
   | 'receive'
   | 'send'
   | 'history'
+  | 'addresses'
   | 'createNamed'
   | 'chainsig'
   | 'export'
@@ -64,9 +66,11 @@ export default function App() {
     activeAccount,
     implicitAddress,
     activeAccountId,
+    chainPaths,
     lock,
     signOut,
     setNetwork,
+    setChainPath,
     switchAccount,
     createNamed,
     claimTokens,
@@ -138,12 +142,25 @@ export default function App() {
     )
   }
 
+  if (screen === 'addresses') {
+    return (
+      <Addresses
+        accounts={[implicitAddress!, ...namedAccounts[network]]}
+        activeAccountId={activeAccountId!}
+        chainPaths={chainPaths}
+        network={network}
+        onBack={() => setScreen('home')}
+      />
+    )
+  }
+
   if (screen === 'chainsig') {
     return (
       <ChainSignatures
         accountId={activeAccountId!}
         seedPhrase={seedPhrase}
         network={network}
+        chainPaths={chainPaths}
         onBack={() => setScreen('settings')}
       />
     )
@@ -174,6 +191,8 @@ export default function App() {
         onOpenChainSig={() => setScreen('chainsig')}
         onClaimTokens={claimTokens}
         onOpenExport={() => setScreen('export')}
+        chainPaths={chainPaths}
+        onSetChainPath={setChainPath}
       />
     )
   }
@@ -202,6 +221,7 @@ export default function App() {
             activeAccountId={activeAccountId!}
             onOpenSettings={() => setScreen('settings')}
             onOpenSidePanel={openSidePanel}
+            onOpenAddresses={() => setScreen('addresses')}
             onOpenReceive={() => setScreen('receive')}
             onOpenSend={() => setScreen('send')}
             onCreateNamed={() => setScreen('createNamed')}

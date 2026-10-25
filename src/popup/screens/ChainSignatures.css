@@ -84,24 +84,39 @@
   gap: 14px;
 }
 
-.scheme-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
+.chain-path {
+  font-size: 11px;
+  color: var(--faint);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chain-select {
+  display: flex;
+  flex-wrap: wrap;
   gap: 8px;
 }
 
-.scheme {
-  padding: 10px 12px;
+.chain-select-btn {
+  padding: 8px 12px;
   border: 1px solid var(--border);
   border-radius: 10px;
   color: var(--fg);
   font-weight: 600;
+  font-size: 13px;
 }
 
-.scheme.selected {
+.chain-select-btn.selected {
   background: var(--accent);
   color: var(--accent-fg);
   border-color: var(--accent);
+}
+
+.sign-meta {
+  font-size: 11px;
+  color: var(--faint);
+  overflow-wrap: anywhere;
 }
 
 .chainsig .error {

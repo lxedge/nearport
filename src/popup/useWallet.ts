@@ -2,10 +2,12 @@ import { useEffect, useState } from 'react'
 import { decryptSeedPhrase, encryptSeedPhrase } from '../lib/crypto'
 import { getImplicitAddress, discoverNamedAccounts } from '../lib/account'
 import { createFaucetAccount } from '../lib/named-account'
+import { DEFAULT_CHAIN_PATHS, type Chain, type ChainPaths } from '../lib/chainsig'
 import type { Network } from '../lib/constants'
 
 const ENCRYPTED_SEED_KEY = 'encryptedSeed'
 const NETWORK_KEY = 'network'
+const CHAIN_PATHS_KEY = 'chainPaths'
 // Per-network named accounts plus which one is active. An empty list or a null
 // active account means the implicit address is in use for that network.
 const TESTNET_ACCOUNTS_KEY = 'testnetAccounts'
@@ -42,6 +44,7 @@ export function useWallet() {
   const [encryptedSeed, setEncryptedSeed] = useState<string | null>(null)
   const [seedPhrase, setSeedPhrase] = useState<string | null>(null)
   const [network, setNetworkState] = useState<Network>('testnet')
+  const [chainPaths, setChainPaths] = useState<ChainPaths>(DEFAULT_CHAIN_PATHS)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -55,6 +58,7 @@ export function useWallet() {
         LEGACY_MAINNET_ACCOUNT_KEY,
         ENCRYPTED_SEED_KEY,
         NETWORK_KEY,
+        CHAIN_PATHS_KEY,
       ])
 
       const storedSeed = data[ENCRYPTED_SEED_KEY]
@@ -91,6 +95,16 @@ export function useWallet() {
 
       const net = data[NETWORK_KEY]
       if (net === 'mainnet' || net === 'testnet') setNetworkState(net)
+
+      const storedPaths = data[CHAIN_PATHS_KEY]
+      if (storedPaths && typeof storedPaths === 'object') {
+        const merged = { ...DEFAULT_CHAIN_PATHS }
+        for (const chain of Object.keys(DEFAULT_CHAIN_PATHS) as Chain[]) {
+          const value = (storedPaths as Record<string, unknown>)[chain]
+          if (typeof value === 'string') merged[chain] = value
+        }
+        setChainPaths(merged)
+      }
 
       const session = await chrome.storage.session.get([UNLOCKED_SEED_KEY, LAST_ACTIVE_KEY])
       const cachedSeed = session[UNLOCKED_SEED_KEY]
@@ -142,8 +156,10 @@ export function useWallet() {
   async function setPassword(seed: string, password: string) {
     const encrypted = await encryptSeedPhrase(seed, password)
     await chrome.storage.local.set({ [ENCRYPTED_SEED_KEY]: encrypted })
+    await chrome.storage.local.remove([CHAIN_PATHS_KEY])
     setNamedAccounts({ testnet: [], mainnet: [] })
     setActiveAccount({ testnet: null, mainnet: null })
+    setChainPaths(DEFAULT_CHAIN_PATHS)
     setEncryptedSeed(encrypted)
     setSeedPhrase(seed)
     await chrome.storage.session.set({
@@ -181,10 +197,12 @@ export function useWallet() {
       MAINNET_ACCOUNTS_KEY,
       ACTIVE_MAINNET_ACCOUNT_KEY,
       ENCRYPTED_SEED_KEY,
+      CHAIN_PATHS_KEY,
     ])
     await chrome.storage.session.remove([UNLOCKED_SEED_KEY, LAST_ACTIVE_KEY])
     setNamedAccounts({ testnet: [], mainnet: [] })
     setActiveAccount({ testnet: null, mainnet: null })
+    setChainPaths(DEFAULT_CHAIN_PATHS)
     setEncryptedSeed(null)
     setSeedPhrase(null)
   }
@@ -192,6 +210,12 @@ export function useWallet() {
   function setNetwork(net: Network) {
     chrome.storage.local.set({ [NETWORK_KEY]: net })
     setNetworkState(net)
+  }
+
+  function setChainPath(chain: Chain, path: string) {
+    const next = { ...chainPaths, [chain]: path }
+    chrome.storage.local.set({ [CHAIN_PATHS_KEY]: next })
+    setChainPaths(next)
   }
 
   function switchAccount(net: Network, id: string | null) {
@@ -237,11 +261,13 @@ export function useWallet() {
     activeAccount,
     implicitAddress,
     activeAccountId,
+    chainPaths,
     setPassword,
     unlock,
     lock,
     signOut,
     setNetwork,
+    setChainPath,
     switchAccount,
     createNamed,
     claimTokens,

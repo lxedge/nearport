@@ -1,0 +1,100 @@
+.addresses {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  padding: 16px;
+  gap: 16px;
+  overflow-y: auto;
+}
+
+.addresses-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.addresses-header h1 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.addr-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.addr-group .label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+}
+
+.addr-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.addr-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+
+.addr-row.active {
+  border-color: var(--accent-border);
+}
+
+.addr-meta {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.addr-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--fg);
+}
+
+.addr-value {
+  font-size: 12px;
+  color: var(--muted);
+  overflow-wrap: anywhere;
+  word-break: break-all;
+}
+
+.addr-row.active .addr-value {
+  color: var(--accent);
+}
+
+.addr-copy {
+  padding: 6px 10px;
+  font-size: 12px;
+  color: var(--muted);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  white-space: nowrap;
+  align-self: flex-start;
+}
+
+.addr-copy:hover {
+  color: var(--fg);
+  border-color: var(--muted);
+}
+
+.addresses .hint {
+  font-size: 11px;
+  color: var(--faint);
+  overflow-wrap: anywhere;
+  word-break: break-all;
+}

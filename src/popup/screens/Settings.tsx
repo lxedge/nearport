@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { CHAIN_LABELS, CHAIN_ORDER, type Chain, type ChainPaths } from '../../lib/chainsig'
 import type { Network } from '../../lib/constants'
 import { isValidAccountName } from '../../lib/format'
 import './Settings.css'
@@ -16,6 +17,8 @@ interface SettingsProps {
   onOpenChainSig: () => void
   onClaimTokens: (name: string) => Promise<string>
   onOpenExport: () => void
+  chainPaths: ChainPaths
+  onSetChainPath: (chain: Chain, path: string) => void
 }
 
 export default function Settings({
@@ -31,8 +34,13 @@ export default function Settings({
   onOpenChainSig,
   onClaimTokens,
   onOpenExport,
+  chainPaths,
+  onSetChainPath,
 }: SettingsProps) {
   const [copiedId, setCopiedId] = useState<string | null>(null)
+  const [editing, setEditing] = useState<Chain | null>(null)
+  const [draft, setDraft] = useState('')
+  const [confirming, setConfirming] = useState<{ chain: Chain; path: string } | null>(null)
   const [claimName, setClaimName] = useState('')
   const [claimBusy, setClaimBusy] = useState(false)
   const [claimError, setClaimError] = useState('')
@@ -69,6 +77,25 @@ export default function Settings({
     } finally {
       setClaimBusy(false)
     }
+  }
+
+  function startEdit(chain: Chain) {
+    setEditing(chain)
+    setDraft(chainPaths[chain])
+  }
+
+  function requestSave() {
+    if (!editing) return
+    const path = draft.trim()
+    if (path.length === 0) return
+    setConfirming({ chain: editing, path })
+  }
+
+  function confirmSave() {
+    if (!confirming) return
+    onSetChainPath(confirming.chain, confirming.path)
+    setConfirming(null)
+    setEditing(null)
   }
 
   return (
@@ -139,6 +166,48 @@ export default function Settings({
         </section>
       )}
 
+      <section className="group">
+        <span className="label">Derivation paths</span>
+        <div className="path-list">
+          {CHAIN_ORDER.map((chain) => (
+            <div className="path-row" key={chain}>
+              <span className="path-label">{CHAIN_LABELS[chain]}</span>
+              {editing === chain ? (
+                <>
+                  <input
+                    type="text"
+                    className="path-input"
+                    value={draft}
+                    onChange={(e) => setDraft(e.target.value)}
+                    spellCheck={false}
+                    autoFocus
+                  />
+                  <button
+                    type="button"
+                    className="path-action"
+                    onClick={requestSave}
+                    disabled={draft.trim().length === 0}
+                  >
+                    Save
+                  </button>
+                  <button type="button" className="path-action" onClick={() => setEditing(null)}>
+                    Cancel
+                  </button>
+                </>
+              ) : (
+                <>
+                  <code className="path-value">{chainPaths[chain]}</code>
+                  <button type="button" className="path-action" onClick={() => startEdit(chain)}>
+                    Edit
+                  </button>
+                </>
+              )}
+            </div>
+          ))}
+        </div>
+        <span className="hint">Each path controls a different address on that chain.</span>
+      </section>
+
       {network === 'testnet' && (
         <section className="group">
           <span className="label">Test tokens</span>
@@ -181,6 +250,26 @@ export default function Settings({
       <button type="button" className="danger" onClick={onSignOut}>
         Sign out
       </button>
+
+      {confirming && (
+        <div className="modal-overlay">
+          <div className="modal">
+            <h2>Change derivation path?</h2>
+            <p>
+              Changing the {CHAIN_LABELS[confirming.chain]} path switches which address your NEAR
+              account controls. The old address may still hold funds.
+            </p>
+            <div className="modal-actions">
+              <button type="button" className="secondary" onClick={() => setConfirming(null)}>
+                Cancel
+              </button>
+              <button type="button" className="primary" onClick={confirmSave}>
+                Confirm
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

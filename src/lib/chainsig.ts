@@ -23,8 +23,38 @@ const SIGN_DEPOSIT = 1n // 1 yoctoNEAR (the contract's minimum)
 export type Chain = 'ethereum' | 'bitcoin' | 'solana' | 'sui' | 'ton'
 export type SignatureScheme = 'secp256k1' | 'ed25519'
 
-// Chains signed with Ed25519 (domain 1); the rest use Secp256k1 (domain 0).
-const ED25519_CHAINS: Chain[] = ['solana', 'sui', 'ton']
+// Signature scheme per chain: secp256k1 for EVM/Bitcoin (domain 0), ed25519 for
+// Solana/Sui/TON (domain 1).
+export const CHAIN_SCHEMES: Record<Chain, SignatureScheme> = {
+  ethereum: 'secp256k1',
+  bitcoin: 'secp256k1',
+  solana: 'ed25519',
+  sui: 'ed25519',
+  ton: 'ed25519',
+}
+
+// Display order and labels for the chains the wallet derives addresses for.
+export const CHAIN_ORDER: Chain[] = ['ethereum', 'bitcoin', 'solana', 'sui', 'ton']
+
+export const CHAIN_LABELS: Record<Chain, string> = {
+  ethereum: 'Ethereum',
+  bitcoin: 'Bitcoin',
+  solana: 'Solana',
+  sui: 'Sui',
+  ton: 'TON',
+}
+
+// A per-chain derivation path. NEAR chain-signature paths are arbitrary strings
+// (e.g. "ethereum-1"); each chain defaults to its own so accounts stay distinct.
+export type ChainPaths = Record<Chain, string>
+
+export const DEFAULT_CHAIN_PATHS: ChainPaths = {
+  ethereum: 'ethereum-1',
+  bitcoin: 'bitcoin-1',
+  solana: 'solana-1',
+  sui: 'sui-1',
+  ton: 'ton-1',
+}
 
 export type ChainSignature =
   | { scheme: 'secp256k1'; r: string; s: string; recoveryId: number }
@@ -49,7 +79,7 @@ export async function getDerivedAddress(
   network: Network,
   chain: Chain,
 ): Promise<string> {
-  const domain = ED25519_CHAINS.includes(chain) ? 1 : 0
+  const domain = CHAIN_SCHEMES[chain] === 'ed25519' ? 1 : 0
   const raw = await derivePublicKey(accountId, path, network, domain)
   switch (chain) {
     case 'ethereum':
@@ -188,7 +218,34 @@ function ed25519ToSuiAddress(raw: Uint8Array): string {
   return '0x' + bytesToHex(blake2b(data, { dkLen: 32 }))
 }
 
+// CRC16-XMODEM (poly 0x1021), the checksum TON embeds in friendly addresses.
+function crc16Xmodem(bytes: Uint8Array): number {
+  let crc = 0x0000
+  for (const byte of bytes) {
+    crc ^= byte << 8
+    for (let i = 0; i < 8; i++) {
+      crc = crc & 0x8000 ? ((crc << 1) ^ 0x1021) & 0xffff : (crc << 1) & 0xffff
+    }
+  }
+  return crc
+}
+
+// Base64url (RFC 4648 §5, unpadded) — the alphabet of TON friendly addresses.
+function bytesToBase64Url(bytes: Uint8Array): string {
+  let bin = ''
+  for (const byte of bytes) bin += String.fromCharCode(byte)
+  return btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
+}
+
+// TON user-friendly (non-bounceable) address: tag 0x51 + workchain 0 + the 32-byte
+// key as the account id + CRC16, base64url-encoded ("UQ…").
 function ed25519ToTonAddress(raw: Uint8Array): string {
-  // Raw TON address form: basechain (workchain 0) with the key as the account id.
-  return '0:' + bytesToHex(raw)
+  const buf = new Uint8Array(36)
+  buf[0] = 0x51 // non-bounceable
+  buf[1] = 0x00 // basechain (workchain 0)
+  buf.set(raw, 2)
+  const crc = crc16Xmodem(buf.subarray(0, 34))
+  buf[34] = crc >> 8
+  buf[35] = crc & 0xff
+  return bytesToBase64Url(buf)
 }
