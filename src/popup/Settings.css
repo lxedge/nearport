@@ -81,6 +81,32 @@
   border-color: var(--muted);
 }
 
+.account-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.account-option {
+  padding: 10px 12px;
+  text-align: left;
+  font-size: 13px;
+  color: var(--fg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow-wrap: anywhere;
+  word-break: break-all;
+}
+
+.account-option:hover {
+  border-color: var(--muted);
+}
+
+.account-option.selected {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
 .lock {
   margin-top: auto;
   padding: 12px 16px;

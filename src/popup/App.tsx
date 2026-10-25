@@ -6,17 +6,31 @@ import Unlock from './Unlock'
 import Home from './Home'
 import Receive from './Receive'
 import Send from './Send'
-import ChooseAccount from './ChooseAccount'
 import CreateNamedAccount from './CreateNamedAccount'
 import Settings from './Settings'
 import { decryptSeedPhrase, encryptSeedPhrase } from '../lib/crypto'
 import { getImplicitAddress, type Network, type CreatedAccount } from '../lib/near'
 
-const ACCOUNT_KEY = 'accountId'
 const ENCRYPTED_SEED_KEY = 'encryptedSeed'
 const NETWORK_KEY = 'network'
-// Optional named `.near` account for mainnet; when absent the implicit address is used.
-const MAINNET_ACCOUNT_KEY = 'mainnetAccountId'
+// Per-network named accounts plus which one is active. An empty list or a null
+// active account means the implicit address is in use for that network.
+const TESTNET_ACCOUNTS_KEY = 'testnetAccounts'
+const ACTIVE_TESTNET_ACCOUNT_KEY = 'activeTestnetAccount'
+const MAINNET_ACCOUNTS_KEY = 'mainnetAccounts'
+const ACTIVE_MAINNET_ACCOUNT_KEY = 'activeMainnetAccount'
+// Legacy single-account keys from earlier versions; read only to migrate.
+const LEGACY_ACCOUNT_KEY = 'accountId'
+const LEGACY_MAINNET_ACCOUNT_KEY = 'mainnetAccountId'
+
+const ACCOUNTS_KEYS: Record<Network, string> = {
+  testnet: TESTNET_ACCOUNTS_KEY,
+  mainnet: MAINNET_ACCOUNTS_KEY,
+}
+const ACTIVE_KEYS: Record<Network, string> = {
+  testnet: ACTIVE_TESTNET_ACCOUNT_KEY,
+  mainnet: ACTIVE_MAINNET_ACCOUNT_KEY,
+}
 // Plaintext seed is cached in chrome.storage.session (in-memory, cleared on
 // browser exit) so a recently-active wallet skips the unlock prompt.
 const UNLOCKED_SEED_KEY = 'unlockedSeed'
@@ -26,7 +40,6 @@ const AUTO_LOCK_MS = 3 * 60 * 1000
 type Screen =
   | 'welcome'
   | 'create'
-  | 'chooseAccount'
   | 'setPassword'
   | 'unlock'
   | 'home'
@@ -36,8 +49,14 @@ type Screen =
   | 'settings'
 
 export default function App() {
-  const [accountId, setAccountId] = useState<string | null>(null)
-  const [mainnetAccountId, setMainnetAccountId] = useState<string | null>(null)
+  const [namedAccounts, setNamedAccounts] = useState<Record<Network, string[]>>({
+    testnet: [],
+    mainnet: [],
+  })
+  const [activeAccount, setActiveAccount] = useState<Record<Network, string | null>>({
+    testnet: null,
+    mainnet: null,
+  })
   const [encryptedSeed, setEncryptedSeed] = useState<string | null>(null)
   const [seedPhrase, setSeedPhrase] = useState<string | null>(null)
   const [network, setNetwork] = useState<Network>('testnet')
@@ -48,21 +67,50 @@ export default function App() {
   useEffect(() => {
     ;(async () => {
       const data = await chrome.storage.local.get([
-        ACCOUNT_KEY,
-        MAINNET_ACCOUNT_KEY,
+        TESTNET_ACCOUNTS_KEY,
+        ACTIVE_TESTNET_ACCOUNT_KEY,
+        MAINNET_ACCOUNTS_KEY,
+        ACTIVE_MAINNET_ACCOUNT_KEY,
+        LEGACY_ACCOUNT_KEY,
+        LEGACY_MAINNET_ACCOUNT_KEY,
         ENCRYPTED_SEED_KEY,
         NETWORK_KEY,
       ])
-      const storedId = data[ACCOUNT_KEY]
+
       const storedSeed = data[ENCRYPTED_SEED_KEY]
-      // An account without an encrypted seed is an incomplete pre-password
-      // setup; treat it as no account so the user can start fresh.
-      if (typeof storedId === 'string' && typeof storedSeed === 'string') {
-        setAccountId(storedId)
-        setEncryptedSeed(storedSeed)
+      if (typeof storedSeed === 'string') setEncryptedSeed(storedSeed)
+
+      // Testnet accounts (migrate the old single `accountId` when it was named).
+      const tAccounts = Array.isArray(data[TESTNET_ACCOUNTS_KEY])
+        ? data[TESTNET_ACCOUNTS_KEY].filter((a): a is string => typeof a === 'string')
+        : []
+      if (tAccounts.length === 0) {
+        const legacy = data[LEGACY_ACCOUNT_KEY]
+        if (typeof legacy === 'string' && legacy.endsWith('.testnet')) tAccounts.push(legacy)
       }
-      const mainnetId = data[MAINNET_ACCOUNT_KEY]
-      if (typeof mainnetId === 'string') setMainnetAccountId(mainnetId)
+      const tActiveRaw = data[ACTIVE_TESTNET_ACCOUNT_KEY]
+      const tActive =
+        typeof tActiveRaw === 'string' && tAccounts.includes(tActiveRaw)
+          ? tActiveRaw
+          : (tAccounts[tAccounts.length - 1] ?? null)
+
+      // Mainnet accounts (migrate the old single `mainnetAccountId`).
+      const mAccounts = Array.isArray(data[MAINNET_ACCOUNTS_KEY])
+        ? data[MAINNET_ACCOUNTS_KEY].filter((a): a is string => typeof a === 'string')
+        : []
+      if (mAccounts.length === 0) {
+        const legacy = data[LEGACY_MAINNET_ACCOUNT_KEY]
+        if (typeof legacy === 'string') mAccounts.push(legacy)
+      }
+      const mActiveRaw = data[ACTIVE_MAINNET_ACCOUNT_KEY]
+      const mActive =
+        typeof mActiveRaw === 'string' && mAccounts.includes(mActiveRaw)
+          ? mActiveRaw
+          : (mAccounts[mAccounts.length - 1] ?? null)
+
+      setNamedAccounts({ testnet: tAccounts, mainnet: mAccounts })
+      setActiveAccount({ testnet: tActive, mainnet: mActive })
+
       const net = data[NETWORK_KEY]
       if (net === 'mainnet' || net === 'testnet') setNetwork(net)
 
@@ -88,37 +136,35 @@ export default function App() {
 
   function handleCreated(account: CreatedAccount) {
     setPendingAccount(account)
-    setScreen('chooseAccount')
-  }
-
-  function handleAccountChosen(accountId: string) {
-    if (!pendingAccount) return
-    // Named accounts are created on testnet via the faucet; keep the wallet on
-    // testnet so balance and sends target the right network.
-    setNetwork('testnet')
-    chrome.storage.local.set({ [NETWORK_KEY]: 'testnet' })
-    setPendingAccount({ ...pendingAccount, accountId })
     setScreen('setPassword')
   }
 
-  function handleAccountSkipped() {
-    setScreen('setPassword')
-  }
-
-  async function handleCreateMainnetNamed(accountId: string) {
-    await chrome.storage.local.set({ [MAINNET_ACCOUNT_KEY]: accountId })
-    setMainnetAccountId(accountId)
+  async function handleCreateNamed(net: Network, accountId: string) {
+    const next = [...namedAccounts[net], accountId]
+    await chrome.storage.local.set({
+      [ACCOUNTS_KEYS[net]]: next,
+      [ACTIVE_KEYS[net]]: accountId,
+    })
+    setNamedAccounts((prev) => ({ ...prev, [net]: next }))
+    setActiveAccount((prev) => ({ ...prev, [net]: accountId }))
     setScreen('home')
+  }
+
+  function handleSwitchAccount(net: Network, id: string | null) {
+    setActiveAccount((prev) => ({ ...prev, [net]: id }))
+    if (id === null) {
+      chrome.storage.local.remove([ACTIVE_KEYS[net]])
+    } else {
+      chrome.storage.local.set({ [ACTIVE_KEYS[net]]: id })
+    }
   }
 
   async function handlePasswordSet(password: string) {
     if (!pendingAccount) return
     const encrypted = await encryptSeedPhrase(pendingAccount.seedPhrase, password)
-    await chrome.storage.local.set({
-      [ACCOUNT_KEY]: pendingAccount.accountId,
-      [ENCRYPTED_SEED_KEY]: encrypted,
-    })
-    setAccountId(pendingAccount.accountId)
+    await chrome.storage.local.set({ [ENCRYPTED_SEED_KEY]: encrypted })
+    setNamedAccounts({ testnet: [], mainnet: [] })
+    setActiveAccount({ testnet: null, mainnet: null })
     setEncryptedSeed(encrypted)
     setSeedPhrase(pendingAccount.seedPhrase)
     await chrome.storage.session.set({
@@ -157,10 +203,16 @@ export default function App() {
   }
 
   async function handleSignOut() {
-    await chrome.storage.local.remove([ACCOUNT_KEY, MAINNET_ACCOUNT_KEY, ENCRYPTED_SEED_KEY])
+    await chrome.storage.local.remove([
+      TESTNET_ACCOUNTS_KEY,
+      ACTIVE_TESTNET_ACCOUNT_KEY,
+      MAINNET_ACCOUNTS_KEY,
+      ACTIVE_MAINNET_ACCOUNT_KEY,
+      ENCRYPTED_SEED_KEY,
+    ])
     await chrome.storage.session.remove([UNLOCKED_SEED_KEY, LAST_ACTIVE_KEY])
-    setAccountId(null)
-    setMainnetAccountId(null)
+    setNamedAccounts({ testnet: [], mainnet: [] })
+    setActiveAccount({ testnet: null, mainnet: null })
     setEncryptedSeed(null)
     setSeedPhrase(null)
     setPendingAccount(null)
@@ -169,28 +221,18 @@ export default function App() {
 
   if (loading) return null
 
-  if (accountId === null) {
+  if (encryptedSeed === null) {
     if (screen === 'create') {
       return <CreateWallet onComplete={handleCreated} onBack={() => setScreen('welcome')} />
-    }
-    if (screen === 'chooseAccount' && pendingAccount) {
-      return (
-        <ChooseAccount
-          seedPhrase={pendingAccount.seedPhrase}
-          onComplete={handleAccountChosen}
-          onSkip={handleAccountSkipped}
-          onBack={() => {
-            setPendingAccount(null)
-            setScreen('create')
-          }}
-        />
-      )
     }
     if (screen === 'setPassword' && pendingAccount) {
       return (
         <SetPassword
           onSubmit={handlePasswordSet}
-          onBack={() => setScreen('chooseAccount')}
+          onBack={() => {
+            setPendingAccount(null)
+            setScreen('create')
+          }}
         />
       )
     }
@@ -201,13 +243,8 @@ export default function App() {
     return <Unlock onSubmit={handleUnlock} />
   }
 
-  // The wallet tracks one account per network. A named `.testnet` account only
-  // exists on testnet; on mainnet it falls back to a stored `.near` account, or
-  // to the key's implicit address when none has been created yet.
   const implicitAddress = getImplicitAddress(seedPhrase)
-  const activeAccountId =
-    network === 'mainnet' ? (mainnetAccountId ?? implicitAddress) : accountId
-  const canCreateNamedAccount = network === 'mainnet' && activeAccountId === implicitAddress
+  const activeAccountId = activeAccount[network] ?? implicitAddress
 
   if (screen === 'receive') {
     return <Receive accountId={activeAccountId} onBack={() => setScreen('home')} />
@@ -216,9 +253,10 @@ export default function App() {
   if (screen === 'createNamed') {
     return (
       <CreateNamedAccount
+        network={network}
         seedPhrase={seedPhrase}
         funderAccountId={activeAccountId}
-        onComplete={handleCreateMainnetNamed}
+        onComplete={(id) => handleCreateNamed(network, id)}
         onBack={() => setScreen('home')}
       />
     )
@@ -229,6 +267,9 @@ export default function App() {
       <Settings
         network={network}
         implicitAddress={implicitAddress}
+        accounts={namedAccounts[network]}
+        activeAccount={activeAccount[network]}
+        onSwitchAccount={(id) => handleSwitchAccount(network, id)}
         onNetworkChange={handleNetworkChange}
         onBack={() => setScreen('home')}
         onLock={handleLock}
@@ -250,9 +291,9 @@ export default function App() {
 
   return (
     <Home
-      accountId={activeAccountId}
       network={network}
-      showCreateNamed={canCreateNamedAccount}
+      accounts={[implicitAddress, ...namedAccounts[network]]}
+      activeAccountId={activeAccountId}
       onOpenSettings={() => setScreen('settings')}
       onOpenReceive={() => setScreen('receive')}
       onOpenSend={() => setScreen('send')}

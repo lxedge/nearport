@@ -1,13 +1,13 @@
 import { useEffect, useState } from 'react'
-import { getBalance, type Network } from '../lib/near'
+import { getAccountBalances, type AccountBalances, type Network } from '../lib/near'
 import './Home.css'
 
 type BalanceStatus = 'loading' | 'ready' | 'error'
 
 interface HomeProps {
-  accountId: string
   network: Network
-  showCreateNamed: boolean
+  accounts: string[]
+  activeAccountId: string
   onOpenSettings: () => void
   onOpenReceive: () => void
   onOpenSend: () => void
@@ -15,24 +15,24 @@ interface HomeProps {
 }
 
 export default function Home({
-  accountId,
   network,
-  showCreateNamed,
+  accounts,
+  activeAccountId,
   onOpenSettings,
   onOpenReceive,
   onOpenSend,
   onCreateNamed,
 }: HomeProps) {
-  const [balance, setBalance] = useState('—')
+  const [balances, setBalances] = useState<AccountBalances | null>(null)
   const [status, setStatus] = useState<BalanceStatus>('loading')
 
   useEffect(() => {
     let cancelled = false
     setStatus('loading')
-    getBalance(accountId, network)
+    getAccountBalances(accounts, network)
       .then((b) => {
         if (cancelled) return
-        setBalance(b)
+        setBalances(b)
         setStatus('ready')
       })
       .catch(() => {
@@ -41,15 +41,17 @@ export default function Home({
     return () => {
       cancelled = true
     }
-  }, [accountId, network])
+  }, [accounts, network])
 
   return (
     <div className="home">
       <header className="account">
         <div className="avatar">◈</div>
         <div className="account-meta">
-          <span className="account-id">{accountId}</span>
-          <span className="account-tag">{network}</span>
+          <span className="account-id">{network === 'mainnet' ? 'Mainnet' : 'Testnet'}</span>
+          <span className="account-tag">
+            {accounts.length} account{accounts.length === 1 ? '' : 's'}
+          </span>
         </div>
         <button type="button" className="settings-btn" onClick={onOpenSettings} aria-label="Settings">
           ⚙
@@ -57,9 +59,9 @@ export default function Home({
       </header>
 
       <section className="balance">
-        <span className="label">Balance</span>
+        <span className="label">Total balance</span>
         <div className="balance-row">
-          <span className="amount">{balance}</span>
+          <span className="amount">{balances?.total ?? '—'}</span>
           <span className="unit">NEAR</span>
         </div>
         {status === 'loading' && <span className="hint">Loading balance…</span>}
@@ -67,16 +69,32 @@ export default function Home({
         {status === 'ready' && <span className="hint">On NEAR {network}</span>}
       </section>
 
+      {balances && (
+        <section className="breakdown">
+          {balances.accounts.map(({ accountId, balance }) => (
+            <div
+              className={accountId === activeAccountId ? 'account-row active' : 'account-row'}
+              key={accountId}
+            >
+              <span className="account-row-id">
+                {/^[0-9a-f]{64}$/.test(accountId)
+                  ? `Implicit · ${accountId.slice(0, 10)}…${accountId.slice(-6)}`
+                  : accountId}
+              </span>
+              <span className="account-row-balance">{balance} NEAR</span>
+            </div>
+          ))}
+        </section>
+      )}
+
       <section className="quick-actions">
         <button type="button" onClick={onOpenSend}>Send</button>
         <button type="button" onClick={onOpenReceive}>Receive</button>
       </section>
 
-      {showCreateNamed && (
-        <button type="button" className="create-named-btn" onClick={onCreateNamed}>
-          Create a named account
-        </button>
-      )}
+      <button type="button" className="create-named-btn" onClick={onCreateNamed}>
+        Create a named account
+      </button>
     </div>
   )
 }

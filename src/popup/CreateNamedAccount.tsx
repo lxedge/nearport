@@ -1,10 +1,11 @@
 import { useState, type FormEvent } from 'react'
-import { createMainnetNamedAccount } from '../lib/near'
+import { createNamedAccount, type Network } from '../lib/near'
 import './CreateNamedAccount.css'
 
 const DEPOSIT_NEAR = '0.1'
 
 interface CreateNamedAccountProps {
+  network: Network
   seedPhrase: string
   funderAccountId: string
   onComplete: (accountId: string) => void
@@ -18,6 +19,7 @@ function isValidName(name: string): boolean {
 }
 
 export default function CreateNamedAccount({
+  network,
   seedPhrase,
   funderAccountId,
   onComplete,
@@ -26,6 +28,8 @@ export default function CreateNamedAccount({
   const [name, setName] = useState('')
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
+
+  const suffix = network === 'testnet' ? '.testnet' : '.near'
 
   async function submit(e: FormEvent) {
     e.preventDefault()
@@ -46,7 +50,7 @@ export default function CreateNamedAccount({
     setError('')
     setBusy(true)
     try {
-      const accountId = await createMainnetNamedAccount(seedPhrase, funderAccountId, trimmed, DEPOSIT_NEAR)
+      const accountId = await createNamedAccount(seedPhrase, funderAccountId, trimmed, DEPOSIT_NEAR, network)
       onComplete(accountId)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Account creation failed.')
@@ -60,12 +64,12 @@ export default function CreateNamedAccount({
         <button type="button" className="back" onClick={onBack} aria-label="Back">
           ←
         </button>
-        <h1>Create mainnet account</h1>
+        <h1>Create named account</h1>
       </header>
 
       <p className="hint">
-        Creates <code>{name.trim() || 'yourname'}.near</code> and transfers {DEPOSIT_NEAR} NEAR to it
-        from your current account.
+        Creates {name.trim() || 'yourname'}
+        {suffix} and transfers {DEPOSIT_NEAR} NEAR to it from your current account.
       </p>
 
       <form onSubmit={submit}>
@@ -81,7 +85,7 @@ export default function CreateNamedAccount({
               spellCheck={false}
               autoComplete="off"
             />
-            <span className="suffix">.near</span>
+            <span className="suffix">{suffix}</span>
           </div>
         </label>
 

@@ -8,6 +8,9 @@ export const NETWORKS: Record<Network, { label: string; rpcUrl: string }> = {
   testnet: { label: 'Testnet', rpcUrl: 'https://rpc.testnet.near.org' },
 }
 
+// Balances are displayed with at most this many decimal places.
+const BALANCE_DECIMALS = 6
+
 export interface CreatedAccount {
   seedPhrase: string
   accountId: string
@@ -28,62 +31,30 @@ export function getImplicitAddress(seedPhrase: string): string {
   return keyToImplicitAddress(parseSeedPhrase(seedPhrase).getPublicKey())
 }
 
-const TESTNET_FAUCET_URL = 'https://helper.nearprotocol.com/account'
-
-// Creates a named `.testnet` account via the NEAR testnet faucet, registering the
-// seed phrase's public key as a full-access key and funding it with test NEAR.
-// Returns the new account id. Throws if the name is taken or the faucet fails.
-export async function createTestnetNamedAccount(seedPhrase: string, name: string): Promise<string> {
-  const accountId = `${name}.testnet`
-  const keyPair = parseSeedPhrase(seedPhrase)
-  const publicKey = keyPair.getPublicKey().toString()
-
-  // Fail fast with a clear message when the name is already registered.
-  if ((await listAccessKeys(accountId, 'testnet')).length > 0) {
-    throw new Error('That account name is already taken.')
-  }
-
-  const res = await fetch(TESTNET_FAUCET_URL, {
-    method: 'POST',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ newAccountId: accountId, newAccountPublicKey: publicKey }),
-  })
-  if (!res.ok) {
-    const body = (await res.text()).trim()
-    throw new Error(`Faucet request failed (${res.status})${body ? `: ${body.slice(0, 160)}` : ''}`)
-  }
-
-  // The faucet returns 200 even when its on-chain CreateAccount action failed
-  // (e.g. the name was taken between our check and the faucet's transaction).
-  // Confirm our key was actually registered before reporting success.
-  const keys = await listAccessKeys(accountId, 'testnet')
-  if (!keys.includes(publicKey)) {
-    throw new Error('Account creation failed; the name may have just been taken.')
-  }
-  return accountId
-}
-
-// Creates a named `.near` account on mainnet by calling the `near` top-level
-// account's `create_account` method from `funderAccountId` (the wallet's funded
-// mainnet account). Transfers `depositNear` to the new account, which is
-// controlled by the same key as the funder. Returns the new account id.
-export async function createMainnetNamedAccount(
+// Creates a named account (`.testnet` or `.near`) by calling the top-level
+// account's `create_account` method (`testnet` on testnet, `near` on mainnet)
+// from `funderAccountId` (a funded account the wallet controls). Transfers
+// `depositNear` to the new account, which is controlled by the same key as the
+// funder. Returns the new account id. Throws if the name is taken or fails.
+export async function createNamedAccount(
   seedPhrase: string,
   funderAccountId: string,
   name: string,
   depositNear: string,
+  network: Network,
 ): Promise<string> {
-  const accountId = `${name}.near`
+  const accountId = network === 'mainnet' ? `${name}.near` : `${name}.testnet`
   const keyPair = parseSeedPhrase(seedPhrase)
   const publicKey = keyPair.getPublicKey().toString()
 
-  if ((await listAccessKeys(accountId, 'mainnet')).length > 0) {
+  // Fail fast with a clear message when the name is already registered.
+  if ((await listAccessKeys(accountId, network)).length > 0) {
     throw new Error('That account name is already taken.')
   }
 
-  const account = new Account(funderAccountId, NETWORKS.mainnet.rpcUrl, keyPair.toString())
+  const account = new Account(funderAccountId, NETWORKS[network].rpcUrl, keyPair.toString())
   await account.callFunction({
-    contractId: 'near',
+    contractId: network === 'mainnet' ? 'near' : 'testnet',
     methodName: 'create_account',
     args: { new_account_id: accountId, new_public_key: publicKey },
     deposit: nearToYocto(depositNear as `${number}`),
@@ -91,7 +62,7 @@ export async function createMainnetNamedAccount(
 
   // `create_account` can report a failed creation via its callback; confirm the
   // account now holds our key before reporting success.
-  const keys = await listAccessKeys(accountId, 'mainnet')
+  const keys = await listAccessKeys(accountId, network)
   if (!keys.includes(publicKey)) {
     throw new Error('Account creation failed; the name may have just been taken.')
   }
@@ -125,7 +96,7 @@ export async function getBalance(accountId: string, network: Network): Promise<s
       account_id: accountId,
       finality: 'final',
     })
-    return yoctoToNear(BigInt(result.amount))
+    return yoctoToNear(BigInt(result.amount), BALANCE_DECIMALS)
   } catch (err) {
     if (isUnknownAccount(err)) return '0'
     throw err
@@ -135,6 +106,43 @@ export async function getBalance(accountId: string, network: Network): Promise<s
 function isUnknownAccount(err: unknown): boolean {
   const msg = err instanceof Error ? err.message : String(err)
   return /does not exist|UNKNOWN_ACCOUNT/i.test(msg)
+}
+
+export interface AccountBalances {
+  accounts: Array<{ accountId: string; balance: string }>
+  total: string
+}
+
+// Fetches the balance (in NEAR) of every account and their sum. Accounts that
+// have never been funded (don't exist on chain) count as "0".
+export async function getAccountBalances(
+  accountIds: string[],
+  network: Network,
+): Promise<AccountBalances> {
+  const provider = new JsonRpcProvider({ url: NETWORKS[network].rpcUrl })
+  const rows = await Promise.all(
+    accountIds.map(async (accountId) => {
+      try {
+        const result = await provider.query<{ amount: string }>({
+          request_type: 'view_account',
+          account_id: accountId,
+          finality: 'final',
+        })
+        return { accountId, yocto: BigInt(result.amount) }
+      } catch (err) {
+        if (isUnknownAccount(err)) return { accountId, yocto: 0n }
+        throw err
+      }
+    }),
+  )
+  const total = rows.reduce((sum, row) => sum + row.yocto, 0n)
+  return {
+    accounts: rows.map((row) => ({
+      accountId: row.accountId,
+      balance: yoctoToNear(row.yocto, BALANCE_DECIMALS),
+    })),
+    total: yoctoToNear(total, BALANCE_DECIMALS),
+  }
 }
 
 // Sends NEAR from the wallet's account to `receiverId`, signing the transaction

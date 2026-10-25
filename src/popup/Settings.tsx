@@ -5,6 +5,9 @@ import './Settings.css'
 interface SettingsProps {
   network: Network
   implicitAddress: string
+  accounts: string[]
+  activeAccount: string | null
+  onSwitchAccount: (id: string | null) => void
   onNetworkChange: (n: Network) => void
   onBack: () => void
   onLock: () => void
@@ -14,6 +17,9 @@ interface SettingsProps {
 export default function Settings({
   network,
   implicitAddress,
+  accounts,
+  activeAccount,
+  onSwitchAccount,
   onNetworkChange,
   onBack,
   onLock,
@@ -59,6 +65,31 @@ export default function Settings({
           {network === 'mainnet' ? 'Mainnet uses real funds.' : 'Testnet uses fake NEAR.'}
         </span>
       </section>
+
+      {accounts.length > 0 && (
+        <section className="group">
+          <span className="label">Account</span>
+          <div className="account-list">
+            <button
+              type="button"
+              className={activeAccount === null ? 'account-option selected' : 'account-option'}
+              onClick={() => onSwitchAccount(null)}
+            >
+              Implicit · {implicitAddress.slice(0, 10)}…{implicitAddress.slice(-6)}
+            </button>
+            {accounts.map((id) => (
+              <button
+                key={id}
+                type="button"
+                className={id === activeAccount ? 'account-option selected' : 'account-option'}
+                onClick={() => onSwitchAccount(id)}
+              >
+                {id}
+              </button>
+            ))}
+          </div>
+        </section>
+      )}
 
       <section className="group">
         <span className="label">Implicit address</span>
