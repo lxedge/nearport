@@ -13,6 +13,12 @@ body {
   font-size: 14px;
 }
 
+/* Chrome side panel: fill the panel instead of the fixed popup dimensions. */
+body.sidepanel {
+  width: 100%;
+  height: 100vh;
+}
+
 #root {
   height: 100%;
 }

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import Welcome from './Welcome'
 import CreateWallet from './CreateWallet'
+import ImportWallet from './ImportWallet'
 import SetPassword from './SetPassword'
 import Unlock from './Unlock'
 import Home from './Home'
@@ -10,7 +11,7 @@ import CreateNamedAccount from './CreateNamedAccount'
 import ChainSignatures from './ChainSignatures'
 import Settings from './Settings'
 import { decryptSeedPhrase, encryptSeedPhrase } from '../lib/crypto'
-import { getImplicitAddress, type Network, type CreatedAccount } from '../lib/near'
+import { getImplicitAddress, createFaucetAccount, type Network, type CreatedAccount } from '../lib/near'
 
 const ENCRYPTED_SEED_KEY = 'encryptedSeed'
 const NETWORK_KEY = 'network'
@@ -41,6 +42,7 @@ const AUTO_LOCK_MS = 3 * 60 * 1000
 type Screen =
   | 'welcome'
   | 'create'
+  | 'import'
   | 'setPassword'
   | 'unlock'
   | 'home'
@@ -65,6 +67,7 @@ export default function App() {
   const [screen, setScreen] = useState<Screen>('welcome')
   const [loading, setLoading] = useState(true)
   const [pendingAccount, setPendingAccount] = useState<CreatedAccount | null>(null)
+  const [pendingSource, setPendingSource] = useState<'create' | 'import'>('create')
 
   useEffect(() => {
     ;(async () => {
@@ -136,12 +139,13 @@ export default function App() {
     })()
   }, [])
 
-  function handleCreated(account: CreatedAccount) {
+  function handleAccountReady(account: CreatedAccount, source: 'create' | 'import') {
     setPendingAccount(account)
+    setPendingSource(source)
     setScreen('setPassword')
   }
 
-  async function handleCreateNamed(net: Network, accountId: string) {
+  async function addAccount(net: Network, accountId: string) {
     const next = [...namedAccounts[net], accountId]
     await chrome.storage.local.set({
       [ACCOUNTS_KEYS[net]]: next,
@@ -149,7 +153,20 @@ export default function App() {
     })
     setNamedAccounts((prev) => ({ ...prev, [net]: next }))
     setActiveAccount((prev) => ({ ...prev, [net]: accountId }))
+  }
+
+  async function handleCreateNamed(net: Network, accountId: string) {
+    await addAccount(net, accountId)
     setScreen('home')
+  }
+
+  // Claims free test tokens by creating a funded `.testnet` account via the
+  // faucet, then adds it to the wallet. Returns the new account id.
+  async function handleClaimTokens(name: string): Promise<string> {
+    if (!seedPhrase) throw new Error('Wallet is locked.')
+    const accountId = await createFaucetAccount(seedPhrase, name)
+    await addAccount('testnet', accountId)
+    return accountId
   }
 
   function handleSwitchAccount(net: Network, id: string | null) {
@@ -225,7 +242,20 @@ export default function App() {
 
   if (encryptedSeed === null) {
     if (screen === 'create') {
-      return <CreateWallet onComplete={handleCreated} onBack={() => setScreen('welcome')} />
+      return (
+        <CreateWallet
+          onComplete={(a) => handleAccountReady(a, 'create')}
+          onBack={() => setScreen('welcome')}
+        />
+      )
+    }
+    if (screen === 'import') {
+      return (
+        <ImportWallet
+          onComplete={(a) => handleAccountReady(a, 'import')}
+          onBack={() => setScreen('welcome')}
+        />
+      )
     }
     if (screen === 'setPassword' && pendingAccount) {
       return (
@@ -233,12 +263,12 @@ export default function App() {
           onSubmit={handlePasswordSet}
           onBack={() => {
             setPendingAccount(null)
-            setScreen('create')
+            setScreen(pendingSource)
           }}
         />
       )
     }
-    return <Welcome onCreate={() => setScreen('create')} />
+    return <Welcome onCreate={() => setScreen('create')} onImport={() => setScreen('import')} />
   }
 
   if (seedPhrase === null) {
@@ -288,6 +318,7 @@ export default function App() {
         onLock={handleLock}
         onSignOut={handleSignOut}
         onOpenChainSig={() => setScreen('chainsig')}
+        onClaimTokens={handleClaimTokens}
       />
     )
   }

@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@noble/hashes": "^2.4.0",
+    "bip39-light": "^1.0.7",
     "near-api-js": "^7.3.1",
     "qrcode": "^1.5.4",
     "react": "^18.3.1",

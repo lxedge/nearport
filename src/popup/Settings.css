@@ -103,6 +103,63 @@
   color: var(--fg);
 }
 
+.claim-row {
+  display: flex;
+  align-items: center;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0 12px;
+}
+
+.claim-row:focus-within {
+  border-color: var(--accent);
+}
+
+.claim-row input {
+  flex: 1;
+  min-width: 0;
+  font: inherit;
+  font-size: 13px;
+  color: var(--fg);
+  background: none;
+  border: none;
+  outline: none;
+  padding: 10px 0;
+}
+
+.claim-row input::placeholder {
+  color: var(--faint);
+}
+
+.claim-row .suffix {
+  font-size: 13px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.claim {
+  padding: 10px 12px;
+  border: 1px solid var(--accent-border);
+  border-radius: 8px;
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.claim:hover:not(:disabled) {
+  background: var(--accent-soft);
+}
+
+.settings .error {
+  font-size: 12px;
+  color: var(--error);
+}
+
+.settings .success {
+  font-size: 12px;
+  color: var(--accent);
+}
+
 .lock {
   padding: 12px 16px;
   border: 1px solid var(--border);

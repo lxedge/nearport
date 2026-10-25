@@ -13,6 +13,11 @@ interface SettingsProps {
   onLock: () => void
   onSignOut: () => void
   onOpenChainSig: () => void
+  onClaimTokens: (name: string) => Promise<string>
+}
+
+function isValidName(name: string): boolean {
+  return /^[a-z0-9]+([-_][a-z0-9]+)*$/.test(name)
 }
 
 export default function Settings({
@@ -26,14 +31,54 @@ export default function Settings({
   onLock,
   onSignOut,
   onOpenChainSig,
+  onClaimTokens,
 }: SettingsProps) {
   const [copiedId, setCopiedId] = useState<string | null>(null)
+  const [claimName, setClaimName] = useState('')
+  const [claimBusy, setClaimBusy] = useState(false)
+  const [claimError, setClaimError] = useState('')
+  const [claimedId, setClaimedId] = useState('')
 
   function copyAccount(id: string) {
     navigator.clipboard
       .writeText(id)
       .then(() => setCopiedId(id))
       .catch(() => {})
+  }
+
+  function openSidePanel() {
+    chrome.windows
+      .getCurrent()
+      .then((win) => {
+        if (typeof win.id === 'number') chrome.sidePanel.open({ windowId: win.id })
+      })
+      .catch(() => {})
+  }
+
+  async function claim() {
+    if (claimBusy) return
+    const name = claimName.trim()
+    if (name.length === 0) return
+    if (!isValidName(name)) {
+      setClaimError('Use lowercase letters, numbers, and - or _.')
+      return
+    }
+    if (name.startsWith('temp-')) {
+      setClaimError('Names starting with "temp-" are not allowed.')
+      return
+    }
+    setClaimError('')
+    setClaimedId('')
+    setClaimBusy(true)
+    try {
+      const id = await onClaimTokens(name)
+      setClaimedId(id)
+      setClaimName('')
+    } catch (err) {
+      setClaimError(err instanceof Error ? err.message : 'Claim failed.')
+    } finally {
+      setClaimBusy(false)
+    }
   }
 
   return (
@@ -103,6 +148,37 @@ export default function Settings({
           </div>
         </section>
       )}
+
+      {network === 'testnet' && (
+        <section className="group">
+          <span className="label">Test tokens</span>
+          <div className="claim-row">
+            <input
+              type="text"
+              placeholder="account name"
+              value={claimName}
+              onChange={(e) => setClaimName(e.target.value)}
+              spellCheck={false}
+              autoComplete="off"
+            />
+            <span className="suffix">.testnet</span>
+          </div>
+          {claimError && <span className="error">{claimError}</span>}
+          {claimedId && <span className="success">{claimedId} funded with 10 NEAR</span>}
+          <button
+            type="button"
+            className="claim"
+            onClick={claim}
+            disabled={claimBusy || claimName.trim().length === 0}
+          >
+            {claimBusy ? 'Claiming…' : 'Claim 10 NEAR'}
+          </button>
+        </section>
+      )}
+
+      <button type="button" className="lock" onClick={openSidePanel}>
+        Open side panel
+      </button>
 
       <button type="button" className="lock" onClick={onOpenChainSig}>
         Chain signatures

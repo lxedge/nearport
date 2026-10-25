@@ -42,20 +42,20 @@
   gap: 14px;
 }
 
-.field {
+.send .field {
   display: flex;
   flex-direction: column;
   gap: 6px;
 }
 
-.field-label {
+.send .field-label {
   font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 0.06em;
   color: var(--muted);
 }
 
-.field input {
+.send .field input {
   font: inherit;
   color: var(--fg);
   background: var(--surface);
@@ -65,11 +65,11 @@
   outline: none;
 }
 
-.field input:focus {
+.send .field input:focus {
   border-color: var(--accent);
 }
 
-.field input::placeholder {
+.send .field input::placeholder {
   color: var(--faint);
 }
 

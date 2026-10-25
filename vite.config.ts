@@ -23,6 +23,7 @@ export default defineConfig({
     rollupOptions: {
       input: {
         popup: fileURLToPath(new URL('./index.html', import.meta.url)),
+        sidepanel: fileURLToPath(new URL('./sidepanel.html', import.meta.url)),
         background: fileURLToPath(new URL('./src/background/index.ts', import.meta.url)),
       },
       output: {

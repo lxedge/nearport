@@ -26,20 +26,20 @@
   color: var(--muted);
 }
 
-.field {
+.chainsig .field {
   display: flex;
   flex-direction: column;
   gap: 6px;
 }
 
-.field-label {
+.chainsig .field-label {
   font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 0.06em;
   color: var(--muted);
 }
 
-.field input {
+.chainsig .field input {
   font: inherit;
   color: var(--fg);
   background: var(--surface);
@@ -49,11 +49,11 @@
   outline: none;
 }
 
-.field input:focus {
+.chainsig .field input:focus {
   border-color: var(--accent);
 }
 
-.field input::placeholder {
+.chainsig .field input::placeholder {
   color: var(--faint);
 }
 

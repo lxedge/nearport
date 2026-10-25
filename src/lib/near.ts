@@ -1,5 +1,7 @@
 import { generateSeedPhrase, parseSeedPhrase } from 'near-api-js/seed-phrase'
 import { Account, keyToImplicitAddress, JsonRpcProvider, nearToYocto, yoctoToNear } from 'near-api-js'
+import { sha256 } from '@noble/hashes/sha2.js'
+import englishWordlist from 'bip39-light/wordlists/english.json'
 
 export type Network = 'mainnet' | 'testnet'
 
@@ -31,6 +33,42 @@ export function getImplicitAddress(seedPhrase: string): string {
   return keyToImplicitAddress(parseSeedPhrase(seedPhrase).getPublicKey())
 }
 
+// Restores a wallet from an existing 12-word seed phrase. Returns the implicit
+// account its key controls. Throws if the phrase is not a valid mnemonic.
+export function importAccount(seedPhrase: string): CreatedAccount {
+  const normalized = seedPhrase.trim().toLowerCase().split(/\s+/).join(' ')
+  if (!isValidMnemonic(normalized)) {
+    throw new Error('Invalid seed phrase')
+  }
+  const keyPair = parseSeedPhrase(normalized)
+  return { seedPhrase: normalized, accountId: keyToImplicitAddress(keyPair.getPublicKey()) }
+}
+
+// Checks that a 12-word phrase is a valid BIP39 mnemonic: every word is in the
+// English wordlist and the embedded checksum matches. `parseSeedPhrase` does not
+// validate the checksum, so this guards against typos deriving a wrong key.
+function isValidMnemonic(mnemonic: string): boolean {
+  const words = mnemonic.split(' ')
+  if (words.length !== 12) return false
+  const indices: number[] = []
+  for (const word of words) {
+    const index = englishWordlist.indexOf(word)
+    if (index === -1) return false
+    indices.push(index)
+  }
+  // 12 words -> 132 bits: 128-bit entropy + 4-bit checksum.
+  let bits = ''
+  for (const i of indices) bits += i.toString(2).padStart(11, '0')
+  const entropyBytes = new Uint8Array(16)
+  for (let i = 0; i < 16; i++) {
+    entropyBytes[i] = parseInt(bits.slice(i * 8, i * 8 + 8), 2)
+  }
+  const hashBits = Array.from(sha256(entropyBytes))
+    .map((b) => b.toString(2).padStart(8, '0'))
+    .join('')
+  return hashBits.slice(0, 4) === bits.slice(128)
+}
+
 // Creates a named account (`.testnet` or `.near`) by calling the top-level
 // account's `create_account` method (`testnet` on testnet, `near` on mainnet)
 // from `funderAccountId` (a funded account the wallet controls). Transfers
@@ -52,6 +90,16 @@ export async function createNamedAccount(
     throw new Error('That account name is already taken.')
   }
 
+  // The funder must exist on-chain and hold enough NEAR to fund the new account.
+  const funderBalance = await getBalance(funderAccountId, network)
+  if (nearToYocto(funderBalance as `${number}`) < nearToYocto(depositNear as `${number}`)) {
+    throw new Error(
+      network === 'testnet'
+        ? 'Your account has no NEAR to fund a new account. Claim test tokens first (Settings → Test tokens).'
+        : 'Your account has no NEAR to fund a new account. Add NEAR to it first.',
+    )
+  }
+
   const account = new Account(funderAccountId, NETWORKS[network].rpcUrl, keyPair.toString())
   await account.callFunction({
     contractId: network === 'mainnet' ? 'near' : 'testnet',
@@ -63,6 +111,38 @@ export async function createNamedAccount(
   // `create_account` can report a failed creation via its callback; confirm the
   // account now holds our key before reporting success.
   const keys = await listAccessKeys(accountId, network)
+  if (!keys.includes(publicKey)) {
+    throw new Error('Account creation failed; the name may have just been taken.')
+  }
+  return accountId
+}
+
+const TESTNET_FAUCET_URL = 'https://helper.nearprotocol.com/account'
+
+// Creates a named `.testnet` account via the NEAR testnet faucet, which funds it
+// with free test NEAR. Returns the new account id. Throws if the name is taken
+// or the faucet fails.
+export async function createFaucetAccount(seedPhrase: string, name: string): Promise<string> {
+  const accountId = `${name}.testnet`
+  const publicKey = parseSeedPhrase(seedPhrase).getPublicKey().toString()
+
+  if ((await listAccessKeys(accountId, 'testnet')).length > 0) {
+    throw new Error('That account name is already taken.')
+  }
+
+  const res = await fetch(TESTNET_FAUCET_URL, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ newAccountId: accountId, newAccountPublicKey: publicKey }),
+  })
+  if (!res.ok) {
+    const body = (await res.text()).trim()
+    throw new Error(`Faucet request failed (${res.status})${body ? `: ${body.slice(0, 160)}` : ''}`)
+  }
+
+  // The faucet returns 200 even when its on-chain CreateAccount action failed
+  // (e.g. a name taken between our check and its transaction); verify our key.
+  const keys = await listAccessKeys(accountId, 'testnet')
   if (!keys.includes(publicKey)) {
     throw new Error('Account creation failed; the name may have just been taken.')
   }

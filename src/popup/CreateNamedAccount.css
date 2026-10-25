@@ -36,20 +36,20 @@
   gap: 14px;
 }
 
-.field {
+.create-named .field {
   display: flex;
   flex-direction: column;
   gap: 6px;
 }
 
-.field-label {
+.create-named .field-label {
   font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 0.06em;
   color: var(--muted);
 }
 
-.name-input {
+.create-named .name-input {
   display: flex;
   align-items: center;
   background: var(--surface);
@@ -58,11 +58,11 @@
   padding: 0 14px;
 }
 
-.name-input:focus-within {
+.create-named .name-input:focus-within {
   border-color: var(--accent);
 }
 
-.name-input input {
+.create-named .name-input input {
   flex: 1;
   min-width: 0;
   font: inherit;
@@ -73,11 +73,11 @@
   padding: 12px 0;
 }
 
-.name-input input::placeholder {
+.create-named .name-input input::placeholder {
   color: var(--faint);
 }
 
-.name-input .suffix {
+.create-named .name-input .suffix {
   font-size: 14px;
   color: var(--muted);
   white-space: nowrap;

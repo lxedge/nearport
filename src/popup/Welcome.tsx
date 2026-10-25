@@ -2,9 +2,10 @@ import './Welcome.css'
 
 interface WelcomeProps {
   onCreate: () => void
+  onImport: () => void
 }
 
-export default function Welcome({ onCreate }: WelcomeProps) {
+export default function Welcome({ onCreate, onImport }: WelcomeProps) {
   return (
     <div className="welcome">
       <div className="brand">
@@ -18,7 +19,7 @@ export default function Welcome({ onCreate }: WelcomeProps) {
         <button type="button" className="primary" onClick={onCreate}>
           Create a new wallet
         </button>
-        <button type="button" className="secondary" disabled>
+        <button type="button" className="secondary" onClick={onImport}>
           I already have a wallet
         </button>
       </div>

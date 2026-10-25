@@ -68,8 +68,7 @@ export default function CreateNamedAccount({
       </header>
 
       <p className="hint">
-        Creates {name.trim() || 'yourname'}
-        {suffix} and transfers {DEPOSIT_NEAR} NEAR to it from your current account.
+        {`Creates ${name.trim() || 'yourname'}${suffix} and transfers ${DEPOSIT_NEAR} NEAR to it from your current account.`}
       </p>
 
       <form onSubmit={submit}>
