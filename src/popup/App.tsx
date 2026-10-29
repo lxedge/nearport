@@ -185,6 +185,7 @@ export default function App() {
         accountId={activeAccountId!}
         seedPhrase={seedPhrase}
         network={network}
+        chainPaths={chainPaths}
         onBack={() => setScreen('home')}
       />
     )
@@ -206,6 +207,7 @@ export default function App() {
             onOpenAddresses={() => setScreen('addresses')}
             onOpenReceive={() => setScreen('receive')}
             onOpenSend={() => setScreen('send')}
+            chainPaths={chainPaths}
           />
         )}
       </div>

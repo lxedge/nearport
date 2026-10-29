@@ -1,13 +1,13 @@
 # NearPort
 
-A NEAR wallet Chrome extension (Manifest V3). Seed phrases are encrypted locally and stored in `chrome.storage.local`. Supports mainnet/testnet accounts, NEAR and NEP-141 token balances, transfers, transaction history, and multi-chain address derivation and message signing via NEAR Chain Signatures.
+A NEAR wallet Chrome extension (Manifest V3). Seed phrases are encrypted locally and stored in `chrome.storage.local`. Supports mainnet/testnet accounts, NEAR and NEP-141 token balances, transfers, transaction history, and multi-chain address derivation, native-token transfers on EVM chains (Base / Arbitrum / BNB Chain), and message signing via NEAR Chain Signatures.
 
 ## Features
 
 - **Wallet**: Create (12-word mnemonic) or import a seed phrase; encrypt it with a password into `chrome.storage.local`; unlock, auto-lock (3 min), export the seed phrase.
 - **Accounts**: Mainnet / testnet switch; implicit accounts + named accounts (`.near` / `.testnet`); one-click testnet faucet for free test tokens; auto-discovers named accounts controlled by the seed on import.
-- **Balances**: NEAR balances (aggregated across accounts) and NEP-141 token balances (FastNear indexer + `ft_metadata`).
-- **Transfers**: Send NEAR; receive with address + QR code.
+- **Balances**: NEAR balances (aggregated across accounts), NEP-141 token balances (FastNear indexer + `ft_metadata`), and native-token balances on Base / Arbitrum / BNB Chain (one shared derived EVM address).
+- **Transfers**: Unified Send — pick the asset and send NEAR or the native token on Base / Arbitrum / BNB Chain; receive NEAR with address + QR code.
 - **History**: Merged local transaction log + NearBlocks indexer (mainnet).
 - **Chain Signatures**: Derive foreign-chain addresses and sign arbitrary messages via the NEAR MPC network. Currently supported:
 
@@ -20,7 +20,7 @@ A NEAR wallet Chrome extension (Manifest V3). Seed phrases are encrypted locally
   | Sui | ed25519 | `0x…` |
   | TON | ed25519 | Non-bounceable friendly (`UQ…`) |
 
-  > Chain signatures currently implement **address derivation + message signing**; constructing and broadcasting real foreign-chain transactions is not yet implemented (see Roadmap).
+  > Chain signatures implement **address derivation + message signing** on all listed chains, plus **real transaction signing/broadcasting on EVM chains** (Base / Arbitrum / BNB Chain, EIP-1559). Transaction construction for the non-EVM chains is still pending (see Roadmap).
 
 ## Quick start
 
@@ -61,6 +61,7 @@ src/
     chainsig.ts                # Chain signatures: address derivation + message signing
     constants.ts               # Network / RPC / indexer API constants
     crypto.ts                  # Seed phrase encryption / decryption
+    evm.ts                     # EVM networks + EIP-1559 send/sign/broadcast
     format.ts                  # NEAR amount formatting and parsing
     history.ts                 # Transaction history (local + indexer)
     mnemonic.ts                # Mnemonic generation and validation
@@ -90,7 +91,8 @@ vite.config.ts                 # Three entry points: popup / sidepanel / backgro
 - [x] Testnet named accounts and faucet
 - [x] Multi-chain address derivation and message signing (Ethereum / Bitcoin / Zcash / Solana / Sui / TON)
 - [x] Zcash transparent address (`t1`) derivation
-- [ ] Chain-signature **real transaction** construction, signing, and broadcasting (per-chain tx body + signature hash)
+- [x] EVM native-token transfers (Base / Arbitrum / BNB Chain, EIP-1559)
+- [ ] Chain-signature transactions for the remaining chains (Bitcoin / Zcash / Solana / Sui / TON)
 - [ ] Zcash transparent transactions (Zcash-specific sighash, `t1`/`t3` encoding, Zcash RPC)
 - [ ] Mainnet named-account creation (fund a new `.near` account with existing NEAR)
 - [ ] More chains and assets (`omni-transaction-rs` or an equivalent transaction builder)

@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
 import { getAccountBalances, type AccountBalances } from '../../lib/balance'
 import { getTokenBalances, type TokenBalance } from '../../lib/tokens'
+import { getDerivedAddress, type ChainPaths } from '../../lib/chainsig'
+import { EVM_NETWORKS, EVM_NETWORK_ORDER, formatNativeAmount, getEvmBalance } from '../../lib/evm'
 import type { Network } from '../../lib/constants'
 import './Home.css'
 
@@ -15,6 +17,7 @@ interface HomeProps {
   onOpenAddresses: () => void
   onOpenReceive: () => void
   onOpenSend: () => void
+  chainPaths: ChainPaths
 }
 
 export default function Home({
@@ -26,11 +29,14 @@ export default function Home({
   onOpenAddresses,
   onOpenReceive,
   onOpenSend,
+  chainPaths,
 }: HomeProps) {
   const [balances, setBalances] = useState<AccountBalances | null>(null)
   const [status, setStatus] = useState<BalanceStatus>('loading')
   const [tokens, setTokens] = useState<TokenBalance[]>([])
   const [tokenStatus, setTokenStatus] = useState<BalanceStatus>('loading')
+  const [evmAssets, setEvmAssets] = useState<Array<{ id: string; symbol: string; name: string; balance: string }>>([])
+  const [evmStatus, setEvmStatus] = useState<BalanceStatus>('loading')
 
   useEffect(() => {
     let cancelled = false
@@ -65,6 +71,31 @@ export default function Home({
       cancelled = true
     }
   }, [activeAccountId, network])
+
+  useEffect(() => {
+    let cancelled = false
+    setEvmStatus('loading')
+    ;(async () => {
+      const address = await getDerivedAddress(activeAccountId, chainPaths.ethereum, network, 'ethereum')
+      const rows = await Promise.all(
+        EVM_NETWORK_ORDER.map(async (id) => ({
+          id,
+          symbol: EVM_NETWORKS[id].symbol,
+          name: EVM_NETWORKS[id].name,
+          balance: formatNativeAmount(await getEvmBalance(id, address)),
+        })),
+      )
+      if (!cancelled) {
+        setEvmAssets(rows)
+        setEvmStatus('ready')
+      }
+    })().catch(() => {
+      if (!cancelled) setEvmStatus('error')
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [activeAccountId, chainPaths.ethereum, network])
 
   return (
     <div className="home">
@@ -152,6 +183,28 @@ export default function Home({
                   <span className="token-name">{t.name}</span>
                 </div>
                 <span className="token-balance">{t.formatted}</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
+
+      <section className="tokens">
+        <span className="label">Other chains</span>
+        {evmStatus === 'loading' && <span className="hint">Loading balances…</span>}
+        {evmStatus === 'error' && <span className="hint error">Balances unavailable</span>}
+        {evmStatus === 'ready' && (
+          <div className="token-list">
+            {evmAssets.map((a) => (
+              <div className="token-row" key={a.id}>
+                <span className="token-icon fallback">{a.symbol.charAt(0).toUpperCase()}</span>
+                <div className="token-meta">
+                  <span className="token-symbol">{a.symbol}</span>
+                  <span className="token-name">{a.name}</span>
+                </div>
+                <span className="token-balance">
+                  {a.balance} {a.symbol}
+                </span>
               </div>
             ))}
           </div>
