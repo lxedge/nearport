@@ -9,7 +9,7 @@ import { NETWORKS, type Network } from './constants'
 import { recordTransaction } from './history'
 
 // NEAR chain signatures: a NEAR account can control accounts on other chains
-// (Ethereum, Bitcoin, Solana, Sui, TON, …) by requesting signatures from the MPC
+// (Ethereum, Bitcoin, Zcash, Solana, Sui, TON, …) by requesting signatures from the MPC
 // network. See https://docs.near.org/chain-abstraction/chain-signatures
 
 const MPC_CONTRACTS: Record<Network, string> = {
@@ -20,25 +20,27 @@ const MPC_CONTRACTS: Record<Network, string> = {
 const SIGN_GAS = 300_000_000_000_000n // 300 TGas
 const SIGN_DEPOSIT = 1n // 1 yoctoNEAR (the contract's minimum)
 
-export type Chain = 'ethereum' | 'bitcoin' | 'solana' | 'sui' | 'ton'
+export type Chain = 'ethereum' | 'bitcoin' | 'zcash' | 'solana' | 'sui' | 'ton'
 export type SignatureScheme = 'secp256k1' | 'ed25519'
 
-// Signature scheme per chain: secp256k1 for EVM/Bitcoin (domain 0), ed25519 for
-// Solana/Sui/TON (domain 1).
+// Signature scheme per chain: secp256k1 for EVM/Bitcoin/Zcash (domain 0), ed25519
+// for Solana/Sui/TON (domain 1).
 export const CHAIN_SCHEMES: Record<Chain, SignatureScheme> = {
   ethereum: 'secp256k1',
   bitcoin: 'secp256k1',
+  zcash: 'secp256k1',
   solana: 'ed25519',
   sui: 'ed25519',
   ton: 'ed25519',
 }
 
 // Display order and labels for the chains the wallet derives addresses for.
-export const CHAIN_ORDER: Chain[] = ['ethereum', 'bitcoin', 'solana', 'sui', 'ton']
+export const CHAIN_ORDER: Chain[] = ['ethereum', 'bitcoin', 'zcash', 'solana', 'sui', 'ton']
 
 export const CHAIN_LABELS: Record<Chain, string> = {
   ethereum: 'Ethereum',
   bitcoin: 'Bitcoin',
+  zcash: 'Zcash',
   solana: 'Solana',
   sui: 'Sui',
   ton: 'TON',
@@ -51,6 +53,7 @@ export type ChainPaths = Record<Chain, string>
 export const DEFAULT_CHAIN_PATHS: ChainPaths = {
   ethereum: 'ethereum-1',
   bitcoin: 'bitcoin-1',
+  zcash: 'zcash-1',
   solana: 'solana-1',
   sui: 'sui-1',
   ton: 'ton-1',
@@ -86,6 +89,8 @@ export async function getDerivedAddress(
       return secp256k1ToEvmAddress(raw)
     case 'bitcoin':
       return secp256k1ToBtcAddress(raw)
+    case 'zcash':
+      return secp256k1ToZcashAddress(raw)
     case 'solana':
       return bytesToBase58(raw)
     case 'sui':
@@ -208,6 +213,22 @@ function secp256k1ToBtcAddress(raw: Uint8Array): string {
   const payload = new Uint8Array(21)
   payload[0] = 0 // mainnet P2PKH version byte
   payload.set(hash, 1)
+  return base58CheckEncode(payload)
+}
+
+// Zcash mainnet transparent P2PKH address ("t1…"): base58check of the two-byte
+// version prefix 0x1CB8 (Zcash Protocol Spec §5.6.1.1) followed by hash160 of the
+// uncompressed secp256k1 pubkey. Shielded ("z…") addresses are out of scope — they
+// require zk-SNARK proving, not a signature.
+function secp256k1ToZcashAddress(raw: Uint8Array): string {
+  const uncompressed = new Uint8Array(65)
+  uncompressed[0] = 4
+  uncompressed.set(raw, 1)
+  const hash = ripemd160(sha256(uncompressed))
+  const payload = new Uint8Array(22)
+  payload[0] = 0x1c // mainnet transparent P2PKH prefix (t1)
+  payload[1] = 0xb8
+  payload.set(hash, 2)
   return base58CheckEncode(payload)
 }
 
