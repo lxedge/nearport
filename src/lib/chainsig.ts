@@ -76,14 +76,26 @@ interface Ed25519SignResponse {
 }
 
 // Derives the foreign address controlled by `accountId` + `path` on a chain.
+// Deterministic given (accountId, path, chain, network), so results are cached
+// in local storage to avoid re-querying the MPC `derived_public_key` each open.
 export async function getDerivedAddress(
   accountId: string,
   path: string,
   network: Network,
   chain: Chain,
 ): Promise<string> {
+  const storageKey = `derivedAddress:${network}:${accountId}:${path}:${chain}`
+  const cached = (await chrome.storage.local.get(storageKey))[storageKey]
+  if (typeof cached === 'string') return cached
+
   const domain = CHAIN_SCHEMES[chain] === 'ed25519' ? 1 : 0
   const raw = await derivePublicKey(accountId, path, network, domain)
+  const address = rawToAddress(chain, raw)
+  await chrome.storage.local.set({ [storageKey]: address })
+  return address
+}
+
+function rawToAddress(chain: Chain, raw: Uint8Array): string {
   switch (chain) {
     case 'ethereum':
       return secp256k1ToEvmAddress(raw)
