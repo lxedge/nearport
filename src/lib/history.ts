@@ -1,4 +1,4 @@
-import { NEARBLOCKS_API, type Network } from './constants'
+import { NEARBLOCKS_API, NEARBLOCKS_EXPLORER, type Network } from './constants'
 import { formatNear } from './format'
 
 // Transaction history has two sources:
@@ -11,7 +11,8 @@ export interface HistoryTransaction {
   hash: string // on-chain tx hash, or a local id
   timestamp: number // ms since epoch
   type: string
-  counterparty: string
+  from: string
+  to: string
   amountNear: string | null
   direction: 'in' | 'out'
   success: boolean
@@ -47,6 +48,21 @@ export async function recordTransaction(
   await chrome.storage.local.set({ [HISTORY_KEY]: list.slice(0, 200) })
 }
 
+// Local entries recorded before the `counterparty` → `from`/`to` migration lack
+// the new fields. Reconstruct them from the old single counterparty so the UI
+// never renders `undefined`.
+type LegacyStoredTxn = StoredTxn & { counterparty?: string }
+
+function normalizeStoredTxn(t: StoredTxn): StoredTxn {
+  const legacy = t as LegacyStoredTxn
+  if (legacy.counterparty === undefined) return t
+  return {
+    ...t,
+    from: t.direction === 'out' ? t.accountId : legacy.counterparty,
+    to: t.direction === 'out' ? legacy.counterparty : t.accountId,
+  }
+}
+
 // Merges local transactions with the indexer (when available), newest first.
 export async function getHistory(
   accountId: string,
@@ -54,7 +70,9 @@ export async function getHistory(
 ): Promise<HistoryTransaction[]> {
   const data = await chrome.storage.local.get(HISTORY_KEY)
   const list: StoredTxn[] = Array.isArray(data[HISTORY_KEY]) ? data[HISTORY_KEY] : []
-  const local = list.filter((t) => t.accountId === accountId && t.network === network)
+  const local = list
+    .filter((t) => t.accountId === accountId && t.network === network)
+    .map(normalizeStoredTxn)
 
   let indexer: HistoryTransaction[] = []
   try {
@@ -85,11 +103,21 @@ function mapTxn(t: RawTxn, accountId: string): HistoryTransaction {
     hash: t.transaction_hash,
     timestamp: Math.floor(Number(t.block_timestamp) / 1_000_000),
     type: transfer ? 'Transfer' : actionLabel(t.actions?.[0]?.action, t.actions?.[0]?.method),
-    counterparty: outgoing ? t.receiver_account_id : t.predecessor_account_id,
+    from: t.predecessor_account_id,
+    to: t.receiver_account_id,
     amountNear: transfer?.deposit ? formatNear(BigInt(transfer.deposit)) : null,
     direction: outgoing ? 'out' : 'in',
     success: t.receipt_outcome?.status ?? true,
   }
+}
+
+// NearBlocks explorer URL for a transaction, or null when the hash is not a
+// real on-chain NEAR transaction hash. Local entries (claim faucet, chain
+// signature) use a UUID and EVM sends use a `0x…` hash; neither has a
+// NearBlocks transaction page.
+export function txnExplorerUrl(network: Network, hash: string): string | null {
+  if (!hash || hash.startsWith('0x') || hash.includes('-')) return null
+  return `${NEARBLOCKS_EXPLORER[network]}/txns/${hash}`
 }
 
 function actionLabel(action?: string, method?: string): string {

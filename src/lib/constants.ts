@@ -14,6 +14,12 @@ export const NEARBLOCKS_API: Record<Network, string> = {
   testnet: 'https://api-testnet.nearblocks.io',
 }
 
+// Public NearBlocks block explorer (used for transaction links in history detail).
+export const NEARBLOCKS_EXPLORER: Record<Network, string> = {
+  mainnet: 'https://nearblocks.io',
+  testnet: 'https://testnet.nearblocks.io',
+}
+
 // Public FastNear indexer (used for fungible-token balances).
 export const FASTNEAR_API: Record<Network, string> = {
   mainnet: 'https://api.fastnear.com',

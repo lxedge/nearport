@@ -155,7 +155,8 @@ export async function signPayload(
 
   await recordTransaction(accountId, network, {
     type: 'Chain signature',
-    counterparty: path,
+    from: accountId,
+    to: path,
     amountNear: null,
     direction: 'out',
     success: true,

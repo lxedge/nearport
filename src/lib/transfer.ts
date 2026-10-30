@@ -23,7 +23,8 @@ export async function sendNear(
   await recordTransaction(accountId, network, {
     hash,
     type: 'Transfer',
-    counterparty: receiverId,
+    from: accountId,
+    to: receiverId,
     amountNear: formatNear(amountYocto),
     direction: 'out',
     success: true,

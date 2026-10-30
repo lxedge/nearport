@@ -16,5 +16,5 @@
 
   /* Popup window: fixed size, shared by every view. */
   --popup-width: 340px;
-  --popup-height: 560px;
+  --popup-height: 600px;
 }

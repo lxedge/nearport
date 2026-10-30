@@ -279,7 +279,8 @@ export async function sendEvmTransaction(params: EvmSendParams): Promise<{ hash:
   await recordTransaction(params.accountId, params.nearNetwork, {
     hash,
     type: `Send ${net.symbol} on ${net.name}`,
-    counterparty: params.to,
+    from,
+    to: params.to,
     amountNear: null,
     direction: 'out',
     success: true,

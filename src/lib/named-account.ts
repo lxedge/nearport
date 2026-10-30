@@ -33,7 +33,8 @@ export async function createFaucetAccount(seedPhrase: string, name: string): Pro
 
   await recordTransaction(accountId, 'testnet', {
     type: 'Claim test tokens',
-    counterparty: 'faucet',
+    from: 'faucet',
+    to: accountId,
     amountNear: null,
     direction: 'in',
     success: true,
