@@ -6,6 +6,12 @@ import { isUnknownAccount } from './rpc'
 // Queries the account balance (in NEAR) from the given network's RPC node.
 // Returns "0" for an account that hasn't been funded yet (doesn't exist on chain).
 export async function getBalance(accountId: string, network: Network): Promise<string> {
+  return formatNear(await getRawBalance(accountId, network))
+}
+
+// Raw balance in yoctoNEAR, for computing max-spendable amounts where the
+// formatted display string is too lossy.
+export async function getRawBalance(accountId: string, network: Network): Promise<bigint> {
   const provider = new JsonRpcProvider({ url: NETWORKS[network].rpcUrl })
   try {
     const result = await provider.query<{ amount: string }>({
@@ -13,9 +19,9 @@ export async function getBalance(accountId: string, network: Network): Promise<s
       account_id: accountId,
       finality: 'final',
     })
-    return formatNear(BigInt(result.amount))
+    return BigInt(result.amount)
   } catch (err) {
-    if (isUnknownAccount(err)) return '0'
+    if (isUnknownAccount(err)) return 0n
     throw err
   }
 }

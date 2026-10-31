@@ -1,0 +1,182 @@
+.swap {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  padding: 16px;
+  gap: 14px;
+  overflow-y: auto;
+}
+
+.swap-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.swap-header h1 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.swap form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.swap-side {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.swap-side select,
+.swap-side input {
+  font: inherit;
+  color: var(--fg);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px 14px;
+  outline: none;
+}
+
+.swap-side select:focus,
+.swap-side input:focus {
+  border-color: var(--accent);
+}
+
+.swap-side select {
+  overflow-y: auto;
+}
+
+.swap-side select option {
+  color: var(--fg);
+  background: var(--surface);
+  padding: 4px;
+}
+
+.swap .available {
+  margin: 0;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.swap .available strong {
+  color: var(--fg);
+}
+
+.swap .error {
+  font-size: 12px;
+  color: var(--error);
+}
+
+.swap .error-text {
+  color: var(--error);
+}
+
+.quote {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px 14px;
+  background: var(--accent-soft);
+  border: 1px solid var(--accent-border);
+  border-radius: 10px;
+}
+
+.quote-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+}
+
+.quote-amount {
+  font-size: 18px;
+  font-weight: 650;
+  color: var(--fg);
+}
+
+.quote-min {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.swap .success-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 24px 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+
+.swap .success-mark {
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  font-size: 22px;
+  color: var(--accent);
+  background: var(--accent-soft);
+  border: 1px solid var(--accent-border);
+  border-radius: 50%;
+}
+
+.swap .success-title {
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.swap .success-amount {
+  font-size: 24px;
+  font-weight: 650;
+}
+
+.swap .success-to {
+  font-size: 12px;
+  color: var(--muted);
+  overflow-wrap: anywhere;
+  word-break: break-all;
+  text-align: center;
+}
+
+.swap .tx {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px 14px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+
+.swap .tx-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+}
+
+.swap .tx-value {
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--fg);
+  overflow-wrap: anywhere;
+  word-break: break-all;
+}
+
+.swap .tx-link {
+  display: block;
+  margin-top: 8px;
+  font-size: 12px;
+  color: var(--accent);
+}
+
+.swap .primary {
+  margin-top: auto;
+}

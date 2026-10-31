@@ -8,6 +8,7 @@ A NEAR wallet Chrome extension (Manifest V3). Seed phrases are encrypted locally
 - **Accounts**: Mainnet / testnet switch; implicit accounts + named accounts (`.near` / `.testnet`); one-click testnet faucet for free test tokens; auto-discovers named accounts controlled by the seed on import.
 - **Balances**: NEAR balances (aggregated across accounts), NEP-141 token balances (FastNear indexer + `ft_metadata`), and native-token balances on Base / Arbitrum / BNB Chain (one shared derived EVM address).
 - **Transfers**: Unified Send — pick the asset and send NEAR or the native token on Base / Arbitrum / BNB Chain; receive NEAR with address + QR code.
+- **Swap / Bridge**: Cross-chain swaps via the NEAR Intents 1Click API. Swap native NEAR for any supported token on any chain; receive on your own derived address. Live quote preview, native-NEAR deposit, and status polling to completion.
 - **History**: Merged local transaction log + NearBlocks indexer (mainnet).
 - **Chain Signatures**: Derive foreign-chain addresses and sign arbitrary messages via the NEAR MPC network. Currently supported:
 
@@ -64,9 +65,11 @@ src/
     evm.ts                     # EVM networks + EIP-1559 send/sign/broadcast
     format.ts                  # NEAR amount formatting and parsing
     history.ts                 # Transaction history (local + indexer)
+    intents.ts                 # NEAR Intents 1Click API client (tokens/quote/submit/status)
     mnemonic.ts                # Mnemonic generation and validation
     named-account.ts           # Testnet faucet named-account creation
     rpc.ts                     # JSON-RPC wrapper
+    swap.ts                    # Swap deposit builder (native NEAR transfer to deposit address)
     tokens.ts                  # NEP-141 token balances
     transfer.ts                # NEAR transfers
   popup/
@@ -74,7 +77,7 @@ src/
     useWallet.ts               # Wallet state hook (keys / accounts / network / chain paths)
     useDerivedAddresses.ts     # Chain-signature address derivation hook
     screens/                   # Welcome/Create/Import/SetPassword/Unlock/Home/
-                               # Receive/Send/History/Addresses/ChainSignatures/
+                               # Receive/Send/Swap/History/Addresses/ChainSignatures/
                                # ExportWallet/Settings
     styles/                    # Theme and form styles
 public/
@@ -92,6 +95,7 @@ vite.config.ts                 # Three entry points: popup / sidepanel / backgro
 - [x] Multi-chain address derivation and message signing (Ethereum / Bitcoin / Zcash / Solana / Sui / TON)
 - [x] Zcash transparent address (`t1`) derivation
 - [x] EVM native-token transfers (Base / Arbitrum / BNB Chain, EIP-1559)
+- [x] Cross-chain swap / bridge via NEAR Intents 1Click API
 - [ ] Chain-signature transactions for the remaining chains (Bitcoin / Zcash / Solana / Sui / TON)
 - [ ] Zcash transparent transactions (Zcash-specific sighash, `t1`/`t3` encoding, Zcash RPC)
 - [ ] Mainnet named-account creation (fund a new `.near` account with existing NEAR)

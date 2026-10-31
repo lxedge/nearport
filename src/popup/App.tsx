@@ -7,6 +7,7 @@ import Unlock from './screens/Unlock'
 import Home from './screens/Home'
 import Receive from './screens/Receive'
 import Send from './screens/Send'
+import Swap from './screens/Swap'
 import History from './screens/History'
 import ChainSignatures from './screens/ChainSignatures'
 import Addresses from './screens/Addresses'
@@ -24,6 +25,7 @@ type Screen =
   | 'home'
   | 'receive'
   | 'send'
+  | 'swap'
   | 'history'
   | 'addresses'
   | 'chainsig'
@@ -179,6 +181,18 @@ export default function App() {
     )
   }
 
+  if (screen === 'swap') {
+    return (
+      <Swap
+        accountId={activeAccountId!}
+        seedPhrase={seedPhrase}
+        network={network}
+        chainPaths={chainPaths}
+        onBack={() => setScreen('home')}
+      />
+    )
+  }
+
   if (screen === 'send') {
     return (
       <Send
@@ -207,6 +221,7 @@ export default function App() {
             onOpenAddresses={() => setScreen('addresses')}
             onOpenReceive={() => setScreen('receive')}
             onOpenSend={() => setScreen('send')}
+            onOpenSwap={() => setScreen('swap')}
             chainPaths={chainPaths}
           />
         )}

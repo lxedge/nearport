@@ -17,6 +17,7 @@ interface HomeProps {
   onOpenAddresses: () => void
   onOpenReceive: () => void
   onOpenSend: () => void
+  onOpenSwap: () => void
   chainPaths: ChainPaths
 }
 
@@ -29,6 +30,7 @@ export default function Home({
   onOpenAddresses,
   onOpenReceive,
   onOpenSend,
+  onOpenSwap,
   chainPaths,
 }: HomeProps) {
   const [balances, setBalances] = useState<AccountBalances | null>(null)
@@ -161,6 +163,7 @@ export default function Home({
 
       <section className="quick-actions">
         <button type="button" onClick={onOpenSend}>Send</button>
+        <button type="button" onClick={onOpenSwap}>Swap</button>
         <button type="button" onClick={onOpenReceive}>Receive</button>
       </section>
 
