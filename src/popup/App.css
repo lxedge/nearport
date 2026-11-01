@@ -24,6 +24,17 @@ body.sidepanel {
   height: 100%;
 }
 
+.app {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.app-body {
+  flex: 1;
+  min-height: 0;
+}
+
 .tabs {
   height: 100%;
   display: flex;

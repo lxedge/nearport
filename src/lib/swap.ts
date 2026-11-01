@@ -1,8 +1,7 @@
-import { Account } from 'near-api-js'
-import { parseSeedPhrase } from 'near-api-js/seed-phrase'
-import { NETWORKS, type Network } from './constants'
+import { signerAccount } from './account'
 import { formatNear } from './format'
 import { recordTransaction } from './history'
+import type { Network } from './constants'
 
 // On-chain deposit transaction builder for a NEAR Intents swap/bridge. The
 // source chain is NEAR; the API returns a `depositAddress` (a 64-hex implicit
@@ -23,8 +22,7 @@ export async function sendNativeNearDeposit(params: {
 }): Promise<string> {
   const { seedPhrase, accountId, network, depositAddress, amountIn } = params
   const amountYocto = BigInt(amountIn)
-  const keyPair = parseSeedPhrase(seedPhrase)
-  const account = new Account(accountId, NETWORKS[network].rpcUrl, keyPair.toString())
+  const account = signerAccount(seedPhrase, accountId, network)
   const result = await account.transfer({ receiverId: depositAddress, amount: amountYocto })
   const hash = result.transaction_outcome.id
   await recordTransaction(accountId, network, {

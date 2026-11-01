@@ -287,26 +287,3 @@ export async function sendEvmTransaction(params: EvmSendParams): Promise<{ hash:
   })
   return { hash, from }
 }
-
-// --- amount formatting ---
-
-const NATIVE_DECIMALS = 18n
-
-// Parses a decimal native-token amount into wei (18 decimals). Throws on bad input.
-export function parseNativeAmount(s: string): bigint {
-  const t = s.trim()
-  const m = /^(\d*)(?:\.(\d*))?$/.exec(t)
-  if (!m || (m[1] === '' && m[2] === undefined)) throw new Error('Invalid amount')
-  const whole = m[1] === '' ? 0n : BigInt(m[1])
-  const frac = (m[2] ?? '')
-  if (frac.length > 18) throw new Error('Amount has more than 18 decimals')
-  return whole * 10n ** NATIVE_DECIMALS + BigInt(frac.padEnd(18, '0'))
-}
-
-// Formats wei as a trimmed decimal string of the native token.
-export function formatNativeAmount(wei: bigint): string {
-  const unit = 10n ** NATIVE_DECIMALS
-  const whole = wei / unit
-  const frac = (wei % unit).toString().padStart(18, '0').replace(/0+$/, '')
-  return frac ? `${whole}.${frac}` : whole.toString()
-}

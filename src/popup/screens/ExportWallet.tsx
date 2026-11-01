@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { getSecretKey } from '../../lib/account'
+import { getPrivateKey } from '../../lib/account'
 import './ExportWallet.css'
 
 interface ExportWalletProps {
@@ -12,7 +12,7 @@ export default function ExportWallet({ seedPhrase, onBack }: ExportWalletProps) 
   const [copiedKey, setCopiedKey] = useState(false)
 
   const words = seedPhrase.split(' ')
-  const secretKey = getSecretKey(seedPhrase)
+  const secretKey = getPrivateKey(seedPhrase)
 
   function copy(text: string, which: 'seed' | 'key') {
     navigator.clipboard

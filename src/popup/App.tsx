@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import AccountHeader from './AccountHeader'
 import Welcome from './screens/Welcome'
 import CreateWallet from './screens/CreateWallet'
 import ImportWallet from './screens/ImportWallet'
@@ -10,7 +11,6 @@ import Send from './screens/Send'
 import Swap from './screens/Swap'
 import History from './screens/History'
 import ChainSignatures from './screens/ChainSignatures'
-import Addresses from './screens/Addresses'
 import ExportWallet from './screens/ExportWallet'
 import Settings from './screens/Settings'
 import { useWallet } from './useWallet'
@@ -27,7 +27,6 @@ type Screen =
   | 'send'
   | 'swap'
   | 'history'
-  | 'addresses'
   | 'chainsig'
   | 'export'
   | 'settings'
@@ -122,24 +121,25 @@ export default function App() {
     return <Unlock onSubmit={handleUnlock} />
   }
 
+  // All unlocked screens share the global account header, which stays pinned
+  // across navigation. Build the screen body first, then wrap it once.
+  const accounts = [implicitAddress!, ...namedAccounts[network]]
+  const header = (
+    <AccountHeader
+      network={network}
+      accounts={accounts}
+      activeAccountId={activeAccountId!}
+      chainPaths={chainPaths}
+      onOpenSettings={() => setScreen('settings')}
+      onOpenSidePanel={openSidePanel}
+    />
+  )
+
+  let body: JSX.Element
   if (screen === 'receive') {
-    return <Receive accountId={activeAccountId!} onBack={() => setScreen('home')} />
-  }
-
-  if (screen === 'addresses') {
-    return (
-      <Addresses
-        accounts={[implicitAddress!, ...namedAccounts[network]]}
-        activeAccountId={activeAccountId!}
-        chainPaths={chainPaths}
-        network={network}
-        onBack={() => setScreen('home')}
-      />
-    )
-  }
-
-  if (screen === 'chainsig') {
-    return (
+    body = <Receive accountId={activeAccountId!} onBack={() => setScreen('home')} />
+  } else if (screen === 'chainsig') {
+    body = (
       <ChainSignatures
         accountId={activeAccountId!}
         seedPhrase={seedPhrase}
@@ -148,14 +148,10 @@ export default function App() {
         onBack={() => setScreen('settings')}
       />
     )
-  }
-
-  if (screen === 'export') {
-    return <ExportWallet seedPhrase={seedPhrase} onBack={() => setScreen('settings')} />
-  }
-
-  if (screen === 'settings') {
-    return (
+  } else if (screen === 'export') {
+    body = <ExportWallet seedPhrase={seedPhrase} onBack={() => setScreen('settings')} />
+  } else if (screen === 'settings') {
+    body = (
       <Settings
         network={network}
         implicitAddress={implicitAddress!}
@@ -179,10 +175,8 @@ export default function App() {
         onSetChainPath={setChainPath}
       />
     )
-  }
-
-  if (screen === 'swap') {
-    return (
+  } else if (screen === 'swap') {
+    body = (
       <Swap
         accountId={activeAccountId!}
         seedPhrase={seedPhrase}
@@ -191,10 +185,8 @@ export default function App() {
         onBack={() => setScreen('home')}
       />
     )
-  }
-
-  if (screen === 'send') {
-    return (
+  } else if (screen === 'send') {
+    body = (
       <Send
         accountId={activeAccountId!}
         seedPhrase={seedPhrase}
@@ -203,45 +195,49 @@ export default function App() {
         onBack={() => setScreen('home')}
       />
     )
+  } else {
+    // Home and History are the two main tabs, shown with a bottom tab bar.
+    body = (
+      <div className="tabs">
+        <div className="tab-content">
+          {screen === 'history' ? (
+            <History accountId={activeAccountId!} network={network} />
+          ) : (
+            <Home
+              network={network}
+              accounts={accounts}
+              activeAccountId={activeAccountId!}
+              onOpenReceive={() => setScreen('receive')}
+              onOpenSend={() => setScreen('send')}
+              onOpenSwap={() => setScreen('swap')}
+              chainPaths={chainPaths}
+            />
+          )}
+        </div>
+        <nav className="tab-bar">
+          <button
+            type="button"
+            className={screen !== 'history' ? 'tab active' : 'tab'}
+            onClick={() => setScreen('home')}
+          >
+            Home
+          </button>
+          <button
+            type="button"
+            className={screen === 'history' ? 'tab active' : 'tab'}
+            onClick={() => setScreen('history')}
+          >
+            History
+          </button>
+        </nav>
+      </div>
+    )
   }
 
-  // Home and History are the two main tabs, shown with a bottom tab bar.
   return (
-    <div className="tabs">
-      <div className="tab-content">
-        {screen === 'history' ? (
-          <History accountId={activeAccountId!} network={network} />
-        ) : (
-          <Home
-            network={network}
-            accounts={[implicitAddress!, ...namedAccounts[network]]}
-            activeAccountId={activeAccountId!}
-            onOpenSettings={() => setScreen('settings')}
-            onOpenSidePanel={openSidePanel}
-            onOpenAddresses={() => setScreen('addresses')}
-            onOpenReceive={() => setScreen('receive')}
-            onOpenSend={() => setScreen('send')}
-            onOpenSwap={() => setScreen('swap')}
-            chainPaths={chainPaths}
-          />
-        )}
-      </div>
-      <nav className="tab-bar">
-        <button
-          type="button"
-          className={screen !== 'history' ? 'tab active' : 'tab'}
-          onClick={() => setScreen('home')}
-        >
-          Home
-        </button>
-        <button
-          type="button"
-          className={screen === 'history' ? 'tab active' : 'tab'}
-          onClick={() => setScreen('history')}
-        >
-          History
-        </button>
-      </nav>
+    <div className="app">
+      {header}
+      <div className="app-body">{body}</div>
     </div>
   )
 }

@@ -5,21 +5,18 @@ import { sendNear } from '../../lib/transfer'
 import {
   EVM_NETWORKS,
   EVM_NETWORK_ORDER,
-  formatNativeAmount,
   getEvmBalance,
-  parseNativeAmount,
   sendEvmTransaction,
 } from '../../lib/evm'
 import {
-  formatSolAmount,
   getSolAddress,
   getSolBalance,
-  parseSolAmount,
+  isValidSolAddress,
   sendSolTransaction,
 } from '../../lib/solana'
 import { getDerivedAddress, type ChainPaths } from '../../lib/chainsig'
 import { SOLANA_EXPLORER, type Network } from '../../lib/constants'
-import { isValidAccountId } from '../../lib/format'
+import { isValidAccountId, parseUnits, formatUnits } from '../../lib/format'
 import './Send.css'
 
 interface SendProps {
@@ -96,9 +93,9 @@ export default function Send({ accountId, seedPhrase, network, chainPaths, onBac
     let cancelled = false
     setBalanceStatus('loading')
     const load = async () => {
-      if (target.kind === 'evm') return formatNativeAmount(await getEvmBalance(target.id, evmAddress))
+      if (target.kind === 'evm') return formatUnits(await getEvmBalance(target.id, evmAddress), 18)
       if (target.kind === 'solana') {
-        return formatSolAmount(await getSolBalance(accountId, chainPaths.solana, network))
+        return formatUnits(await getSolBalance(accountId, chainPaths.solana, network), 9)
       }
       return await getBalance(accountId, network)
     }
@@ -122,14 +119,14 @@ export default function Send({ accountId, seedPhrase, network, chainPaths, onBac
       if (recipient.trim().toLowerCase() === evmAddress.toLowerCase()) return 'Recipient is your own address.'
       let wei: bigint
       try {
-        wei = parseNativeAmount(amount)
+        wei = parseUnits(amount, 18)
       } catch {
         return 'Enter a valid amount (max 18 decimals).'
       }
       if (wei <= 0n) return 'Amount must be greater than zero.'
       if (balanceStatus === 'ready') {
         try {
-          if (wei > parseNativeAmount(balance)) return 'Insufficient balance.'
+          if (wei > parseUnits(balance, 18)) return 'Insufficient balance.'
         } catch {
           // Unparseable balance is surfaced separately; don't block the send.
         }
@@ -140,18 +137,18 @@ export default function Send({ accountId, seedPhrase, network, chainPaths, onBac
     if (target.kind === 'solana') {
       const to = recipient.trim()
       if (to.length === 0) return 'Enter a recipient address.'
-      if (!/^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(to)) return 'Invalid recipient address.'
+      if (!isValidSolAddress(to)) return 'Invalid recipient address.'
       if (to === solAddress) return 'Recipient is your own address.'
       let lamports: bigint
       try {
-        lamports = parseSolAmount(amount)
+        lamports = parseUnits(amount, 9)
       } catch {
         return 'Enter a valid amount (max 9 decimals).'
       }
       if (lamports <= 0n) return 'Amount must be greater than zero.'
       if (balanceStatus === 'ready') {
         try {
-          if (lamports > parseSolAmount(balance)) return 'Insufficient balance.'
+          if (lamports > parseUnits(balance, 9)) return 'Insufficient balance.'
         } catch {
           // Unparseable balance is surfaced separately; don't block the send.
         }
@@ -199,7 +196,7 @@ export default function Send({ accountId, seedPhrase, network, chainPaths, onBac
           nearNetwork: network,
           evmNetworkId: target.id,
           to: recipient.trim(),
-          valueWei: parseNativeAmount(amount),
+          valueWei: parseUnits(amount, 18),
         })
         setTxHash(hash)
       } else if (target.kind === 'solana') {
@@ -209,7 +206,7 @@ export default function Send({ accountId, seedPhrase, network, chainPaths, onBac
           path: chainPaths.solana,
           network,
           to: recipient.trim(),
-          lamports: parseSolAmount(amount),
+          lamports: parseUnits(amount, 9),
         })
         setTxHash(signature)
       } else {

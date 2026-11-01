@@ -1,8 +1,9 @@
-import { useEffect, useState } from 'react'
-import { getAccountBalances, type AccountBalances } from '../../lib/balance'
-import { getTokenBalances, type TokenBalance } from '../../lib/tokens'
+import { useEffect, useMemo, useState } from 'react'
+import { getAccountBalances, getBalance, type AccountBalances } from '../../lib/balance'
+import { getTokenBalances } from '../../lib/tokens'
 import { getDerivedAddress, type ChainPaths } from '../../lib/chainsig'
-import { EVM_NETWORKS, EVM_NETWORK_ORDER, formatNativeAmount, getEvmBalance } from '../../lib/evm'
+import { EVM_NETWORKS, EVM_NETWORK_ORDER, getEvmBalance } from '../../lib/evm'
+import { formatUnits, sumDecimals } from '../../lib/format'
 import type { Network } from '../../lib/constants'
 import './Home.css'
 
@@ -12,22 +13,43 @@ interface HomeProps {
   network: Network
   accounts: string[]
   activeAccountId: string
-  onOpenSettings: () => void
-  onOpenSidePanel: () => void
-  onOpenAddresses: () => void
   onOpenReceive: () => void
   onOpenSend: () => void
   onOpenSwap: () => void
   chainPaths: ChainPaths
 }
 
+// One asset held by the account, aggregated across chains. `chains` has one
+// entry per chain the token is held on (same symbol bridged to multiple chains).
+// `total` is the sum of all chain balances at display precision (6 decimals).
+// `native` marks the chain's gas token (NEAR); native assets sort first.
+interface Asset {
+  symbol: string
+  name: string
+  icon: string | null
+  native: boolean
+  total: string
+  chains: Array<{ chainId: string; chainLabel: string; balance: string }>
+}
+
+// Chain ids selectable in the asset filter, plus their display labels.
+const CHAIN_LABELS: Record<string, string> = {
+  near: 'NEAR',
+  ...Object.fromEntries(EVM_NETWORK_ORDER.map((id) => [id, EVM_NETWORKS[id].name])),
+}
+const CHAIN_IDS: string[] = ['near', ...EVM_NETWORK_ORDER]
+
+// Native assets (the home-chain gas token) sort first, then alphabetical.
+function sortAssets(assets: Iterable<Asset>): Asset[] {
+  return [...assets].sort((a, b) =>
+    a.native === b.native ? a.symbol.localeCompare(b.symbol) : a.native ? -1 : 1,
+  )
+}
+
 export default function Home({
   network,
   accounts,
   activeAccountId,
-  onOpenSettings,
-  onOpenSidePanel,
-  onOpenAddresses,
   onOpenReceive,
   onOpenSend,
   onOpenSwap,
@@ -35,10 +57,15 @@ export default function Home({
 }: HomeProps) {
   const [balances, setBalances] = useState<AccountBalances | null>(null)
   const [status, setStatus] = useState<BalanceStatus>('loading')
-  const [tokens, setTokens] = useState<TokenBalance[]>([])
-  const [tokenStatus, setTokenStatus] = useState<BalanceStatus>('loading')
-  const [evmAssets, setEvmAssets] = useState<Array<{ id: string; symbol: string; name: string; balance: string }>>([])
-  const [evmStatus, setEvmStatus] = useState<BalanceStatus>('loading')
+  const [assets, setAssets] = useState<Asset[]>([])
+  const [assetStatus, setAssetStatus] = useState<BalanceStatus>('loading')
+  const [chainFilter, setChainFilter] = useState('all')
+  const [expandedSymbol, setExpandedSymbol] = useState<string | null>(null)
+
+  // `accounts` is a fresh array literal from the parent on every render, so a
+  // `useEffect` keyed on the array reference would re-fetch in an endless loop.
+  // Depend on the joined account list instead.
+  const accountsKey = accounts.join(',')
 
   useEffect(() => {
     let cancelled = false
@@ -55,83 +82,86 @@ export default function Home({
     return () => {
       cancelled = true
     }
-  }, [accounts, network])
+  }, [accountsKey, network])
 
+  // Aggregate the active account's assets, grouped by symbol across chains.
+  // NEAR-chain assets (native + NEP-141) render immediately; EVM native balances
+  // arrive later because they need a slow MPC `derived_public_key` lookup, and a
+  // derivation failure must not hide the NEAR assets.
   useEffect(() => {
     let cancelled = false
-    setTokenStatus('loading')
-    getTokenBalances(activeAccountId, network)
-      .then((list) => {
-        if (cancelled) return
-        setTokens(list)
-        setTokenStatus('ready')
-      })
-      .catch(() => {
-        if (!cancelled) setTokenStatus('error')
-      })
-    return () => {
-      cancelled = true
-    }
-  }, [activeAccountId, network])
-
-  useEffect(() => {
-    let cancelled = false
-    setEvmStatus('loading')
+    setAssetStatus('loading')
     ;(async () => {
-      const address = await getDerivedAddress(activeAccountId, chainPaths.ethereum, network, 'ethereum')
-      const rows = await Promise.all(
-        EVM_NETWORK_ORDER.map(async (id) => ({
-          id,
-          symbol: EVM_NETWORKS[id].symbol,
-          name: EVM_NETWORKS[id].name,
-          balance: formatNativeAmount(await getEvmBalance(id, address)),
-        })),
-      )
-      if (!cancelled) {
-        setEvmAssets(rows)
-        setEvmStatus('ready')
+      const [nativeNear, nep141] = await Promise.all([
+        getBalance(activeAccountId, network),
+        getTokenBalances(activeAccountId, network),
+      ])
+
+      const groups = new Map<string, Asset>()
+      const push = (symbol: string, name: string, icon: string | null, chainId: string, chainLabel: string, balance: string, native = false) => {
+        const key = symbol.toLowerCase()
+        let asset = groups.get(key)
+        if (!asset) {
+          asset = { symbol, name, icon, native, total: '', chains: [] }
+          groups.set(key, asset)
+        }
+        asset.native = asset.native || native
+        asset.chains.push({ chainId, chainLabel, balance })
+      }
+
+      // Sum each aggregated asset's chain balances at display precision.
+      const finalize = () =>
+        sortAssets(
+          [...groups.values()].map((a) => ({
+            ...a,
+            total: sumDecimals(a.chains.map((c) => c.balance)),
+          })),
+        )
+
+      // NEAR is the wallet's home-chain gas token; keep it pinned first.
+      push('NEAR', 'NEAR', null, 'near', 'NEAR', nativeNear, true)
+      for (const t of nep141) push(t.symbol, t.name, t.icon, 'near', 'NEAR', t.formatted)
+
+      if (cancelled) return
+      setAssets(finalize())
+      setAssetStatus('ready')
+
+      // EVM native balances are best-effort; append them once derived.
+      try {
+        const evmAddress = await getDerivedAddress(activeAccountId, chainPaths.ethereum, network, 'ethereum')
+        const evmRows = await Promise.all(
+          EVM_NETWORK_ORDER.map(async (id) => ({
+            id,
+            symbol: EVM_NETWORKS[id].symbol,
+            balance: formatUnits(await getEvmBalance(id, evmAddress), 18),
+          })),
+        )
+        if (cancelled) return
+        for (const row of evmRows) {
+          push(row.symbol, row.symbol, null, row.id, CHAIN_LABELS[row.id], row.balance)
+        }
+        setAssets(finalize())
+      } catch {
+        // EVM balances unavailable; the NEAR-chain assets are already shown.
       }
     })().catch(() => {
-      if (!cancelled) setEvmStatus('error')
+      if (!cancelled) setAssetStatus('error')
     })
     return () => {
       cancelled = true
     }
   }, [activeAccountId, chainPaths.ethereum, network])
 
+  // Filter assets to the selected chain (or show all).
+  const visibleAssets = useMemo(() => {
+    if (chainFilter === 'all') return assets
+    return assets
+      .map((a) => ({ ...a, chains: a.chains.filter((c) => c.chainId === chainFilter) }))
+      .filter((a) => a.chains.length > 0)
+  }, [assets, chainFilter])
+
   return (
     <div className="home">
-      <header className="account">
-        <button
-          type="button"
-          className="account-toggle"
-          onClick={onOpenAddresses}
-          aria-label="View all addresses"
-          title="View all addresses"
-        >
-          <span className="avatar">◈</span>
-          <span className="account-meta">
-            <span className="account-id">{network === 'mainnet' ? 'Mainnet' : 'Testnet'}</span>
-            <span className="account-tag">
-              {accounts.length} account{accounts.length === 1 ? '' : 's'}
-            </span>
-          </span>
-          <span className="chevron">▾</span>
-        </button>
-        <button
-          type="button"
-          className="panel-btn"
-          onClick={onOpenSidePanel}
-          aria-label="Open side panel"
-          title="Open side panel"
-        >
-          ⧉
-        </button>
-        <button type="button" className="settings-btn" onClick={onOpenSettings} aria-label="Settings">
-          ⚙
-        </button>
-      </header>
-
       <section className="balance">
         <span className="label">Total balance</span>
         <div className="balance-row">
@@ -142,24 +172,6 @@ export default function Home({
         {status === 'error' && <span className="hint error">Network unreachable</span>}
         {status === 'ready' && <span className="hint">On NEAR {network}</span>}
       </section>
-
-      {balances && (
-        <section className="breakdown">
-          {balances.accounts.map(({ accountId, balance }) => (
-            <div
-              className={accountId === activeAccountId ? 'account-row active' : 'account-row'}
-              key={accountId}
-            >
-              <span className="account-row-id">
-                {/^[0-9a-f]{64}$/.test(accountId)
-                  ? `Implicit · ${accountId.slice(0, 10)}…${accountId.slice(-6)}`
-                  : accountId}
-              </span>
-              <span className="account-row-balance">{balance} NEAR</span>
-            </div>
-          ))}
-        </section>
-      )}
 
       <section className="quick-actions">
         <button type="button" onClick={onOpenSend}>
@@ -176,49 +188,75 @@ export default function Home({
         </button>
       </section>
 
-      <section className="tokens">
-        <span className="label">Tokens</span>
-        {tokenStatus === 'loading' && <span className="hint">Loading tokens…</span>}
-        {tokenStatus === 'error' && <span className="hint error">Tokens unavailable</span>}
-        {tokenStatus === 'ready' && tokens.length === 0 && <span className="hint">No tokens yet</span>}
-        {tokens.length > 0 && (
-          <div className="token-list">
-            {tokens.map((t) => (
-              <div className="token-row" key={t.contractId}>
-                {t.icon ? (
-                  <img className="token-icon" src={t.icon} alt="" />
-                ) : (
-                  <span className="token-icon fallback">{t.symbol.charAt(0).toUpperCase()}</span>
-                )}
-                <div className="token-meta">
-                  <span className="token-symbol">{t.symbol}</span>
-                  <span className="token-name">{t.name}</span>
-                </div>
-                <span className="token-balance">{t.formatted}</span>
-              </div>
+      <section className="assets">
+        <div className="assets-head">
+          <span className="label">Assets</span>
+          <select
+            className="chain-select"
+            value={chainFilter}
+            onChange={(e) => setChainFilter(e.target.value)}
+            aria-label="Filter assets by chain"
+          >
+            <option value="all">All chains</option>
+            {CHAIN_IDS.map((id) => (
+              <option key={id} value={id}>
+                {CHAIN_LABELS[id]}
+              </option>
             ))}
-          </div>
-        )}
-      </section>
+          </select>
+        </div>
 
-      <section className="tokens">
-        <span className="label">Other chains</span>
-        {evmStatus === 'loading' && <span className="hint">Loading balances…</span>}
-        {evmStatus === 'error' && <span className="hint error">Balances unavailable</span>}
-        {evmStatus === 'ready' && (
-          <div className="token-list">
-            {evmAssets.map((a) => (
-              <div className="token-row" key={a.id}>
-                <span className="token-icon fallback">{a.symbol.charAt(0).toUpperCase()}</span>
-                <div className="token-meta">
-                  <span className="token-symbol">{a.symbol}</span>
-                  <span className="token-name">{a.name}</span>
+        {assetStatus === 'loading' && <span className="hint">Loading assets…</span>}
+        {assetStatus === 'error' && <span className="hint error">Assets unavailable</span>}
+        {assetStatus === 'ready' && visibleAssets.length === 0 && (
+          <span className="hint">No assets on this chain</span>
+        )}
+        {visibleAssets.length > 0 && (
+          <div className="asset-list">
+            {visibleAssets.map((a) => {
+              const multi = a.chains.length > 1
+              const expanded = expandedSymbol === a.symbol.toLowerCase()
+              return (
+                <div className="asset-group" key={a.symbol}>
+                  <button
+                    type="button"
+                    className={multi ? 'asset-row clickable' : 'asset-row'}
+                    onClick={() => multi && setExpandedSymbol(expanded ? null : a.symbol.toLowerCase())}
+                  >
+                    {a.icon ? (
+                      <img className="asset-icon" src={a.icon} alt="" />
+                    ) : (
+                      <span className="asset-icon fallback">{a.symbol.charAt(0).toUpperCase()}</span>
+                    )}
+                    <div className="asset-meta">
+                      <span className="asset-symbol">{a.symbol}</span>
+                      <span className="asset-name">
+                        {multi ? `${a.chains.length} chains` : a.chains[0].chainLabel}
+                      </span>
+                    </div>
+                    {multi ? (
+                      <span className="asset-balance">{a.total}</span>
+                    ) : (
+                      <span className="asset-balance">{a.chains[0].balance}</span>
+                    )}
+                    {multi && (
+                      <span className="asset-chevron">{expanded ? '▾' : '▸'}</span>
+                    )}
+                  </button>
+
+                  {multi && expanded && (
+                    <div className="asset-detail">
+                      {a.chains.map((c) => (
+                        <div className="asset-detail-row" key={c.chainId}>
+                          <span className="asset-detail-chain">{c.chainLabel}</span>
+                          <span className="asset-detail-balance">{sumDecimals([c.balance])}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
-                <span className="token-balance">
-                  {a.balance} {a.symbol}
-                </span>
-              </div>
-            ))}
+              )
+            })}
           </div>
         )}
       </section>

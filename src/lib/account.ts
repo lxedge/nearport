@@ -1,12 +1,20 @@
 import { generateSeedPhrase, parseSeedPhrase } from 'near-api-js/seed-phrase'
-import { keyToImplicitAddress } from 'near-api-js'
-import { NEARBLOCKS_API, type Network } from './constants'
+import { Account, keyToImplicitAddress } from 'near-api-js'
+import { NEARBLOCKS_API, NETWORKS, type Network } from './constants'
 import { normalizeSeedPhrase } from './format'
 import { isValidMnemonic } from './mnemonic'
 
 export interface CreatedAccount {
   seedPhrase: string
   accountId: string
+}
+
+// A NEAR account that signs transactions with the key derived from a seed
+// phrase. The shared constructor for every on-chain action (transfers, swap
+// deposits, chain-signature requests).
+export function signerAccount(seedPhrase: string, accountId: string, network: Network): Account {
+  const keyPair = parseSeedPhrase(seedPhrase)
+  return new Account(accountId, NETWORKS[network].rpcUrl, keyPair.toString())
 }
 
 // Creates a fresh NEAR account: a 12-word mnemonic plus the implicit account id
@@ -24,8 +32,8 @@ export function getImplicitAddress(seedPhrase: string): string {
   return keyToImplicitAddress(parseSeedPhrase(seedPhrase).getPublicKey())
 }
 
-// The secret key string (e.g. "ed25519:...") derived from a seed phrase.
-export function getSecretKey(seedPhrase: string): string {
+// The private key string (e.g. "ed25519:...") derived from a seed phrase.
+export function getPrivateKey(seedPhrase: string): string {
   return parseSeedPhrase(seedPhrase).toString()
 }
 

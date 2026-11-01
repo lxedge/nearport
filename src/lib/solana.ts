@@ -14,28 +14,6 @@ import { recordTransaction } from './history'
 // transaction message; @solana/web3.js handles the (error-prone) message
 // serialization and broadcast.
 
-const SOL_DECIMALS = 9n
-
-// Parses a decimal SOL amount into lamports. Throws on malformed input or more
-// than 9 fractional digits.
-export function parseSolAmount(s: string): bigint {
-  const t = s.trim()
-  const m = /^(\d*)(?:\.(\d*))?$/.exec(t)
-  if (!m || (m[1] === '' && m[2] === undefined)) throw new Error('Invalid amount')
-  const whole = m[1] === '' ? 0n : BigInt(m[1])
-  const frac = m[2] ?? ''
-  if (frac.length > 9) throw new Error('Amount has more than 9 decimals')
-  return whole * 10n ** SOL_DECIMALS + BigInt(frac.padEnd(9, '0'))
-}
-
-// Formats lamports as a trimmed decimal SOL string.
-export function formatSolAmount(lamports: bigint): string {
-  const unit = 10n ** SOL_DECIMALS
-  const whole = lamports / unit
-  const frac = (lamports % unit).toString().padStart(9, '0').replace(/0+$/, '')
-  return frac ? `${whole}.${frac}` : whole.toString()
-}
-
 // The derived Solana address (base58) controlled by the NEAR account + path.
 export async function getSolAddress(
   accountId: string,
@@ -66,16 +44,22 @@ export interface SolSendParams {
   lamports: bigint
 }
 
+// True when `address` is a valid Solana base58 address (PublicKey-parsable).
+export function isValidSolAddress(address: string): boolean {
+  try {
+    new PublicKey(address)
+    return true
+  } catch {
+    return false
+  }
+}
+
 // Builds, signs (via MPC), and broadcasts a native SOL transfer. Returns the
 // transaction signature and the derived sender address.
 export async function sendSolTransaction(params: SolSendParams): Promise<{ signature: string; from: string }> {
   const { seedPhrase, accountId, path, network, to, lamports } = params
-  let toKey: PublicKey
-  try {
-    toKey = new PublicKey(to)
-  } catch {
-    throw new Error('Invalid recipient address')
-  }
+  if (!isValidSolAddress(to)) throw new Error('Invalid recipient address')
+  const toKey = new PublicKey(to)
 
   const connection = new Connection(SOLANA_RPC[network])
   const from = await getSolAddress(accountId, path, network)

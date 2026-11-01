@@ -1,5 +1,5 @@
-import { JsonRpcProvider } from 'near-api-js'
-import { FASTNEAR_API, NETWORKS, type Network } from './constants'
+import { FASTNEAR_API, type Network } from './constants'
+import { getNearProvider } from './provider'
 
 // NEP-141 fungible tokens held by an account. Balances come from the FastNear
 // indexer; per-token metadata (symbol, decimals, icon) is read from each token
@@ -74,7 +74,7 @@ function fallbackSymbol(contractId: string): string {
 }
 
 async function getFtMetadata(contractId: string, network: Network): Promise<FtMetadata | null> {
-  const provider = new JsonRpcProvider({ url: NETWORKS[network].rpcUrl })
+  const provider = getNearProvider(network)
   try {
     const result = await provider.query<{ result: number[] }>({
       request_type: 'call_function',

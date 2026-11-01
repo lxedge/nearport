@@ -1,5 +1,5 @@
-import { JsonRpcProvider } from 'near-api-js'
-import { NETWORKS, type Network } from './constants'
+import { getNearProvider } from './provider'
+import type { Network } from './constants'
 
 // True when an RPC error means the account does not exist (yet).
 export function isUnknownAccount(err: unknown): boolean {
@@ -9,7 +9,7 @@ export function isUnknownAccount(err: unknown): boolean {
 
 // Returns the public keys registered on an account, or [] if it doesn't exist.
 export async function listAccessKeys(accountId: string, network: Network): Promise<string[]> {
-  const provider = new JsonRpcProvider({ url: NETWORKS[network].rpcUrl })
+  const provider = getNearProvider(network)
   try {
     const result = await provider.query<{ keys: Array<{ public_key: string }> }>({
       request_type: 'view_access_key_list',

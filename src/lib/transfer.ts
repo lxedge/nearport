@@ -1,8 +1,7 @@
-import { Account } from 'near-api-js'
-import { parseSeedPhrase } from 'near-api-js/seed-phrase'
-import { NETWORKS, type Network } from './constants'
+import { signerAccount } from './account'
 import { formatNear, parseNear } from './format'
 import { recordTransaction } from './history'
+import type { Network } from './constants'
 
 // Sends NEAR from the wallet's account to `receiverId`, signing the transaction
 // with the key derived from the stored seed phrase. Returns the transaction hash.
@@ -15,8 +14,7 @@ export async function sendNear(
   amountNear: string,
   network: Network,
 ): Promise<string> {
-  const keyPair = parseSeedPhrase(seedPhrase)
-  const account = new Account(accountId, NETWORKS[network].rpcUrl, keyPair.toString())
+  const account = signerAccount(seedPhrase, accountId, network)
   const amountYocto = parseNear(amountNear)
   const result = await account.transfer({ receiverId, amount: amountYocto })
   const hash = result.transaction_outcome.id

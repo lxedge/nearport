@@ -45,6 +45,33 @@ export function formatUnits(units: bigint | string, decimals: number): string {
   return frac ? `${whole}.${frac}` : whole.toString()
 }
 
+// Sums decimal-amount strings with exact integer arithmetic and rounds the
+// result to `decimals` fractional digits (half-up), trimming trailing zeros.
+// Defaults to the wallet's display precision (BALANCE_DECIMALS).
+export function sumDecimals(values: string[], decimals: number = BALANCE_DECIMALS): string {
+  let maxFrac = 0
+  const parts = values.map((v) => {
+    const [whole, frac = ''] = v.trim().split('.')
+    maxFrac = Math.max(maxFrac, frac.length)
+    return { whole, frac }
+  })
+
+  // Scale every term to the widest fractional width for exact bigint addition.
+  const scale = 10n ** BigInt(maxFrac)
+  let total = 0n
+  for (const { whole, frac } of parts) {
+    total += BigInt(whole) * scale + BigInt(frac.padEnd(maxFrac, '0') || '0')
+  }
+
+  // Re-scale to the target precision, rounding half-up.
+  if (maxFrac <= decimals) {
+    return formatUnits(total * 10n ** BigInt(decimals - maxFrac), decimals)
+  }
+  const shift = 10n ** BigInt(maxFrac - decimals)
+  const rounded = (total + shift / 2n) / shift
+  return formatUnits(rounded, decimals)
+}
+
 // Normalizes a seed phrase: lowercase and collapse whitespace.
 export function normalizeSeedPhrase(seedPhrase: string): string {
   return seedPhrase.trim().toLowerCase().split(/\s+/).join(' ')
