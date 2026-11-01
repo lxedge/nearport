@@ -20,29 +20,70 @@ const MPC_CONTRACTS: Record<Network, string> = {
 const SIGN_GAS = 300_000_000_000_000n // 300 TGas
 const SIGN_DEPOSIT = 1n // 1 yoctoNEAR (the contract's minimum)
 
-export type Chain = 'ethereum' | 'bitcoin' | 'zcash' | 'solana' | 'sui' | 'ton'
+export type Chain =
+  | 'ethereum'
+  | 'bitcoin'
+  | 'bitcoincash'
+  | 'litecoin'
+  | 'dogecoin'
+  | 'dash'
+  | 'zcash'
+  | 'tron'
+  | 'solana'
+  | 'sui'
+  | 'aptos'
+  | 'stellar'
+  | 'ton'
 export type SignatureScheme = 'secp256k1' | 'ed25519'
 
-// Signature scheme per chain: secp256k1 for EVM/Bitcoin/Zcash (domain 0), ed25519
-// for Solana/Sui/TON (domain 1).
+// Signature scheme per chain: secp256k1 (MPC domain 0) for EVM / Bitcoin-family /
+// Tron, ed25519 (domain 1) for Solana / Sui / Aptos / Stellar / TON.
 export const CHAIN_SCHEMES: Record<Chain, SignatureScheme> = {
   ethereum: 'secp256k1',
   bitcoin: 'secp256k1',
+  bitcoincash: 'secp256k1',
+  litecoin: 'secp256k1',
+  dogecoin: 'secp256k1',
+  dash: 'secp256k1',
   zcash: 'secp256k1',
+  tron: 'secp256k1',
   solana: 'ed25519',
   sui: 'ed25519',
+  aptos: 'ed25519',
+  stellar: 'ed25519',
   ton: 'ed25519',
 }
 
 // Display order and labels for the chains the wallet derives addresses for.
-export const CHAIN_ORDER: Chain[] = ['ethereum', 'bitcoin', 'zcash', 'solana', 'sui', 'ton']
+export const CHAIN_ORDER: Chain[] = [
+  'ethereum',
+  'bitcoin',
+  'bitcoincash',
+  'litecoin',
+  'dogecoin',
+  'dash',
+  'zcash',
+  'tron',
+  'solana',
+  'sui',
+  'aptos',
+  'stellar',
+  'ton',
+]
 
 export const CHAIN_LABELS: Record<Chain, string> = {
   ethereum: 'Ethereum',
   bitcoin: 'Bitcoin',
+  bitcoincash: 'Bitcoin Cash',
+  litecoin: 'Litecoin',
+  dogecoin: 'Dogecoin',
+  dash: 'Dash',
   zcash: 'Zcash',
+  tron: 'Tron',
   solana: 'Solana',
   sui: 'Sui',
+  aptos: 'Aptos',
+  stellar: 'Stellar',
   ton: 'TON',
 }
 
@@ -53,9 +94,16 @@ export type ChainPaths = Record<Chain, string>
 export const DEFAULT_CHAIN_PATHS: ChainPaths = {
   ethereum: 'ethereum-1',
   bitcoin: 'bitcoin-1',
+  bitcoincash: 'bitcoincash-1',
+  litecoin: 'litecoin-1',
+  dogecoin: 'dogecoin-1',
+  dash: 'dash-1',
   zcash: 'zcash-1',
+  tron: 'tron-1',
   solana: 'solana-1',
   sui: 'sui-1',
+  aptos: 'aptos-1',
+  stellar: 'stellar-1',
   ton: 'ton-1',
 }
 
@@ -100,13 +148,27 @@ function rawToAddress(chain: Chain, raw: Uint8Array): string {
     case 'ethereum':
       return secp256k1ToEvmAddress(raw)
     case 'bitcoin':
-      return secp256k1ToBtcAddress(raw)
+      return secp256k1ToP2pkhAddress(raw, 0x00)
+    case 'bitcoincash':
+      return secp256k1ToP2pkhAddress(raw, 0x00) // legacy P2PKH, same prefix as Bitcoin
+    case 'litecoin':
+      return secp256k1ToP2pkhAddress(raw, 0x30)
+    case 'dogecoin':
+      return secp256k1ToP2pkhAddress(raw, 0x1e)
+    case 'dash':
+      return secp256k1ToP2pkhAddress(raw, 0x4c)
     case 'zcash':
       return secp256k1ToZcashAddress(raw)
+    case 'tron':
+      return secp256k1ToTronAddress(raw)
     case 'solana':
       return bytesToBase58(raw)
     case 'sui':
       return ed25519ToSuiAddress(raw)
+    case 'aptos':
+      return ed25519ToAptosAddress(raw)
+    case 'stellar':
+      return ed25519ToStellarAddress(raw)
     case 'ton':
       return ed25519ToTonAddress(raw)
   }
@@ -176,6 +238,26 @@ export async function signPayload(
   return signature
 }
 
+// Returns the raw derived public key bytes for a chain: 64 bytes (X||Y) for
+// secp256k1 (domain 0) or 32 bytes for ed25519 (domain 1). Cached like the
+// address derivation, since it is deterministic for (accountId, path, network).
+export async function getDerivedPublicKey(
+  accountId: string,
+  path: string,
+  network: Network,
+  chain: Chain,
+): Promise<Uint8Array> {
+  const storageKey = `derivedPubKey:${network}:${accountId}:${path}:${chain}`
+  const cached = (await chrome.storage.local.get(storageKey))[storageKey]
+  if (typeof cached === 'string') return Uint8Array.from(Buffer.from(cached, 'base64'))
+  const domain = CHAIN_SCHEMES[chain] === 'ed25519' ? 1 : 0
+  const raw = await derivePublicKey(accountId, path, network, domain)
+  await chrome.storage.local.set({
+    [storageKey]: Buffer.from(raw).toString('base64'),
+  })
+  return raw
+}
+
 // --- internal helpers ---
 
 // Returns the raw derived public key bytes for a domain: 64 bytes (X||Y) for
@@ -212,19 +294,32 @@ function base58CheckEncode(payload: Uint8Array): string {
 }
 
 function secp256k1ToEvmAddress(raw: Uint8Array): string {
-  const uncompressed = new Uint8Array(65)
-  uncompressed[0] = 4
-  uncompressed.set(raw, 1)
-  return '0x' + bytesToHex(keccak_256(uncompressed).slice(-20))
+  // `raw` is the 64-byte X||Y point; keccak256 over those 64 bytes (no 0x04
+  // prefix), last 20 bytes. Matches the official chainsig-lib.
+  return '0x' + bytesToHex(keccak_256(raw).slice(-20))
 }
 
-function secp256k1ToBtcAddress(raw: Uint8Array): string {
+// Bitcoin-family legacy P2PKH address: base58check of a one-byte version prefix +
+// hash160 of the uncompressed secp256k1 pubkey (0x04 || X || Y, 65 bytes).
+// Bitcoin, Bitcoin Cash (legacy), Litecoin, Dogecoin, and Dash differ only in the
+// prefix byte.
+function secp256k1ToP2pkhAddress(raw: Uint8Array, versionByte: number): string {
   const uncompressed = new Uint8Array(65)
   uncompressed[0] = 4
   uncompressed.set(raw, 1)
   const hash = ripemd160(sha256(uncompressed))
   const payload = new Uint8Array(21)
-  payload[0] = 0 // mainnet P2PKH version byte
+  payload[0] = versionByte
+  payload.set(hash, 1)
+  return base58CheckEncode(payload)
+}
+
+// Tron address ("T…"): base58check of the 0x41 prefix + the last 20 bytes of
+// keccak256 over the 64-byte secp256k1 pubkey (no 0x04 prefix).
+function secp256k1ToTronAddress(raw: Uint8Array): string {
+  const hash = keccak_256(raw).slice(-20)
+  const payload = new Uint8Array(21)
+  payload[0] = 0x41
   payload.set(hash, 1)
   return base58CheckEncode(payload)
 }
@@ -250,6 +345,44 @@ function ed25519ToSuiAddress(raw: Uint8Array): string {
   data[0] = 0 // ed25519 signature-scheme flag byte
   data.set(raw, 1)
   return '0x' + bytesToHex(blake2b(data, { dkLen: 32 }))
+}
+
+// Aptos address ("0x…" 64 hex chars): the 32-byte ed25519 pubkey, hex-encoded,
+// with a 0x prefix and no hashing.
+function ed25519ToAptosAddress(raw: Uint8Array): string {
+  return '0x' + bytesToHex(raw)
+}
+
+// RFC 4648 base32, uppercase, no padding — Stellar's StrKey alphabet.
+function bytesToBase32(bytes: Uint8Array): string {
+  const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567'
+  let out = ''
+  let bits = 0
+  let value = 0
+  for (const byte of bytes) {
+    value = (value << 8) | byte
+    bits += 8
+    while (bits >= 5) {
+      out += alphabet[(value >>> (bits - 5)) & 31]
+      bits -= 5
+    }
+  }
+  if (bits > 0) out += alphabet[(value << (5 - bits)) & 31]
+  return out
+}
+
+// Stellar address ("G…", 56 chars): base32 of the 0x30 version byte (ed25519
+// public-key type) + the 32-byte pubkey + CRC16-XMODEM (little-endian).
+function ed25519ToStellarAddress(raw: Uint8Array): string {
+  const body = new Uint8Array(33)
+  body[0] = 0x30 // version byte: 6 << 3 = ed25519 public key
+  body.set(raw, 1)
+  const crc = crc16Xmodem(body)
+  const payload = new Uint8Array(35)
+  payload.set(body, 0)
+  payload[33] = crc & 0xff
+  payload[34] = crc >> 8
+  return bytesToBase32(payload)
 }
 
 // CRC16-XMODEM (poly 0x1021), the checksum TON embeds in friendly addresses.

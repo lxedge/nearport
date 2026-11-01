@@ -21,18 +21,37 @@ import './Swap.css'
 const NEAR_WRAP_ASSET = 'nep141:wrap.near'
 const NEAR_DECIMALS = 24
 
-// 1Click destination blockchains that map to a wallet-derivable chainsig chain.
+// 1Click destination blockchains that map to the shared Ethereum-derived address
+// (all EVM chains share one secp256k1-derived 0x address).
 const EVM_BLOCKCHAINS: Record<string, true> = {
   eth: true, base: true, arb: true, bsc: true, pol: true, op: true, scroll: true,
   avax: true, gnosis: true, monad: true, xlayer: true, plasma: true, bera: true,
-  movement: true, starknet: true, fogo: true, hood: true, abs: true, adi: true,
+  fogo: true, hood: true, abs: true, adi: true, hypercore: true,
 }
+// 1Click destination blockchains mapped to a wallet-derivable chainsig chain.
 const BLOCKCHAIN_CHAIN: Record<string, Chain> = {
   sol: 'solana',
   ton: 'ton',
   btc: 'bitcoin',
+  bch: 'bitcoincash',
+  ltc: 'litecoin',
+  doge: 'dogecoin',
+  dash: 'dash',
   zec: 'zcash',
   sui: 'sui',
+  aptos: 'aptos',
+  stellar: 'stellar',
+  tron: 'tron',
+}
+
+// A destination blockchain is selectable only when the wallet can derive the
+// user's receiving address for it: the NEAR account itself, an EVM chain, or a
+// chain with a known chainsig derivation. Anything else (unsupported MPC curve
+// such as Aleo/Cardano/Starknet, post-quantum chains like QTC/PRL, or chains
+// whose address scheme is not yet verified like XRP/Movement) is excluded so a
+// user can never send into an address the wallet does not control.
+function isSupportedBlockchain(blockchain: string): boolean {
+  return blockchain === 'near' || EVM_BLOCKCHAINS[blockchain] === true || BLOCKCHAIN_CHAIN[blockchain] !== undefined
 }
 
 interface SwapProps {
@@ -127,10 +146,13 @@ export default function Swap({ accountId, seedPhrase, network, chainPaths, onBac
     }
   }, [dest, accountId, network, chainPaths])
 
-  // Unique destination blockchains, sorted for a stable dropdown.
+  // Unique destination blockchains, sorted for a stable dropdown, restricted to
+  // chains the wallet can derive a receiving address for.
   const blockchains = useMemo(() => {
     if (!tokens) return []
-    return [...new Set(tokens.map((t) => t.blockchain))].sort()
+    return [...new Set(tokens.map((t) => t.blockchain))]
+      .filter(isSupportedBlockchain)
+      .sort()
   }, [tokens])
 
   // Tokens on the selected destination chain, sorted by symbol.

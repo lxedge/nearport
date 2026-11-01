@@ -10,8 +10,15 @@ import {
   parseNativeAmount,
   sendEvmTransaction,
 } from '../../lib/evm'
+import {
+  formatSolAmount,
+  getSolAddress,
+  getSolBalance,
+  parseSolAmount,
+  sendSolTransaction,
+} from '../../lib/solana'
 import { getDerivedAddress, type ChainPaths } from '../../lib/chainsig'
-import type { Network } from '../../lib/constants'
+import { SOLANA_EXPLORER, type Network } from '../../lib/constants'
 import { isValidAccountId } from '../../lib/format'
 import './Send.css'
 
@@ -26,27 +33,29 @@ interface SendProps {
 type BalanceStatus = 'loading' | 'ready' | 'error'
 type SendStatus = 'idle' | 'sending' | 'sent'
 
-// One sendable asset. `id` is 'near' for the home chain or an EVM network id.
+// One sendable asset: native NEAR, a native EVM token, or native SOL.
 interface AssetTarget {
   id: string
   label: string
   unit: string
-  isEvm: boolean
+  kind: 'near' | 'evm' | 'solana'
 }
 
 const TARGETS: AssetTarget[] = [
-  { id: 'near', label: 'NEAR', unit: 'NEAR', isEvm: false },
+  { id: 'near', label: 'NEAR', unit: 'NEAR', kind: 'near' },
   ...EVM_NETWORK_ORDER.map((id) => ({
     id,
     label: `${EVM_NETWORKS[id].symbol} · ${EVM_NETWORKS[id].name}`,
     unit: EVM_NETWORKS[id].symbol,
-    isEvm: true,
+    kind: 'evm' as const,
   })),
+  { id: 'solana', label: 'SOL · Solana', unit: 'SOL', kind: 'solana' },
 ]
 
 export default function Send({ accountId, seedPhrase, network, chainPaths, onBack }: SendProps) {
   const [targetId, setTargetId] = useState('near')
   const [evmAddress, setEvmAddress] = useState('')
+  const [solAddress, setSolAddress] = useState('')
   const [balance, setBalance] = useState('—')
   const [balanceStatus, setBalanceStatus] = useState<BalanceStatus>('loading')
   const [recipient, setRecipient] = useState('')
@@ -70,11 +79,29 @@ export default function Send({ accountId, seedPhrase, network, chainPaths, onBac
   }, [accountId, chainPaths.ethereum, network])
 
   useEffect(() => {
-    if (target.isEvm && !evmAddress) return
+    let cancelled = false
+    getSolAddress(accountId, chainPaths.solana, network)
+      .then((a) => {
+        if (!cancelled) setSolAddress(a)
+      })
+      .catch(() => {})
+    return () => {
+      cancelled = true
+    }
+  }, [accountId, chainPaths.solana, network])
+
+  useEffect(() => {
+    if (target.kind === 'evm' && !evmAddress) return
+    if (target.kind === 'solana' && !solAddress) return
     let cancelled = false
     setBalanceStatus('loading')
-    const load = async () =>
-      target.isEvm ? formatNativeAmount(await getEvmBalance(target.id, evmAddress)) : await getBalance(accountId, network)
+    const load = async () => {
+      if (target.kind === 'evm') return formatNativeAmount(await getEvmBalance(target.id, evmAddress))
+      if (target.kind === 'solana') {
+        return formatSolAmount(await getSolBalance(accountId, chainPaths.solana, network))
+      }
+      return await getBalance(accountId, network)
+    }
     load()
       .then((b) => {
         if (cancelled) return
@@ -87,10 +114,10 @@ export default function Send({ accountId, seedPhrase, network, chainPaths, onBac
     return () => {
       cancelled = true
     }
-  }, [target.id, target.isEvm, evmAddress, accountId, network])
+  }, [target.id, target.kind, evmAddress, solAddress, accountId, chainPaths.solana, network])
 
   function validate(): string | null {
-    if (target.isEvm) {
+    if (target.kind === 'evm') {
       if (!/^0x[0-9a-fA-F]{40}$/.test(recipient.trim())) return 'Invalid recipient address.'
       if (recipient.trim().toLowerCase() === evmAddress.toLowerCase()) return 'Recipient is your own address.'
       let wei: bigint
@@ -103,6 +130,28 @@ export default function Send({ accountId, seedPhrase, network, chainPaths, onBac
       if (balanceStatus === 'ready') {
         try {
           if (wei > parseNativeAmount(balance)) return 'Insufficient balance.'
+        } catch {
+          // Unparseable balance is surfaced separately; don't block the send.
+        }
+      }
+      return null
+    }
+
+    if (target.kind === 'solana') {
+      const to = recipient.trim()
+      if (to.length === 0) return 'Enter a recipient address.'
+      if (!/^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(to)) return 'Invalid recipient address.'
+      if (to === solAddress) return 'Recipient is your own address.'
+      let lamports: bigint
+      try {
+        lamports = parseSolAmount(amount)
+      } catch {
+        return 'Enter a valid amount (max 9 decimals).'
+      }
+      if (lamports <= 0n) return 'Amount must be greater than zero.'
+      if (balanceStatus === 'ready') {
+        try {
+          if (lamports > parseSolAmount(balance)) return 'Insufficient balance.'
         } catch {
           // Unparseable balance is surfaced separately; don't block the send.
         }
@@ -142,7 +191,7 @@ export default function Send({ accountId, seedPhrase, network, chainPaths, onBac
     setError('')
     setStatus('sending')
     try {
-      if (target.isEvm) {
+      if (target.kind === 'evm') {
         const { hash } = await sendEvmTransaction({
           seedPhrase,
           accountId,
@@ -153,6 +202,16 @@ export default function Send({ accountId, seedPhrase, network, chainPaths, onBac
           valueWei: parseNativeAmount(amount),
         })
         setTxHash(hash)
+      } else if (target.kind === 'solana') {
+        const { signature } = await sendSolTransaction({
+          seedPhrase,
+          accountId,
+          path: chainPaths.solana,
+          network,
+          to: recipient.trim(),
+          lamports: parseSolAmount(amount),
+        })
+        setTxHash(signature)
       } else {
         setTxHash(await sendNear(seedPhrase, accountId, recipient.trim(), amount, network))
       }
@@ -163,7 +222,12 @@ export default function Send({ accountId, seedPhrase, network, chainPaths, onBac
     }
   }
 
-  const explorer = target.isEvm ? `${EVM_NETWORKS[target.id].explorer}/tx/${txHash}` : null
+  const explorer =
+    target.kind === 'evm'
+      ? `${EVM_NETWORKS[target.id].explorer}/tx/${txHash}`
+      : target.kind === 'solana'
+        ? `${SOLANA_EXPLORER[network]}/tx/${txHash}`
+        : null
 
   if (status === 'sent') {
     return (
@@ -189,7 +253,7 @@ export default function Send({ accountId, seedPhrase, network, chainPaths, onBac
           <code className="tx-value">{txHash}</code>
           {explorer && (
             <a className="tx-link" href={explorer} target="_blank" rel="noreferrer">
-              View on {EVM_NETWORKS[target.id].name} explorer
+              View on {target.kind === 'solana' ? 'Solana' : EVM_NETWORKS[target.id].name} explorer
             </a>
           )}
         </div>
@@ -240,7 +304,7 @@ export default function Send({ accountId, seedPhrase, network, chainPaths, onBac
           <span className="field-label">Recipient</span>
           <input
             type="text"
-            placeholder={target.isEvm ? '0x…' : 'Account address'}
+            placeholder={target.kind === 'evm' ? '0x…' : target.kind === 'solana' ? 'Solana address' : 'Account address'}
             value={recipient}
             onChange={(e) => setRecipient(e.target.value)}
             autoFocus

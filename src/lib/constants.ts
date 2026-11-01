@@ -27,3 +27,14 @@ export const FASTNEAR_API: Record<Network, string> = {
 }
 
 export const TESTNET_FAUCET_URL = 'https://helper.nearprotocol.com/account'
+
+// Public Solana RPC endpoints for the chain-signature SOL transfer feature.
+export const SOLANA_RPC: Record<Network, string> = {
+  mainnet: 'https://api.mainnet-beta.solana.com',
+  testnet: 'https://api.devnet.solana.com',
+}
+
+export const SOLANA_EXPLORER: Record<Network, string> = {
+  mainnet: 'https://solscan.io',
+  testnet: 'https://solscan.io',
+}

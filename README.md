@@ -21,7 +21,7 @@ A NEAR wallet Chrome extension (Manifest V3). Seed phrases are encrypted locally
   | Sui | ed25519 | `0x…` |
   | TON | ed25519 | Non-bounceable friendly (`UQ…`) |
 
-  > Chain signatures implement **address derivation + message signing** on all listed chains, plus **real transaction signing/broadcasting on EVM chains** (Base / Arbitrum / BNB Chain, EIP-1559). Transaction construction for the non-EVM chains is still pending (see Roadmap).
+  > Chain signatures implement **address derivation + message signing** on all listed chains, plus **real transaction signing/broadcasting on EVM chains** (Base / Arbitrum / BNB Chain, EIP-1559) and **Solana** (native SOL transfers). Transaction construction for Bitcoin / Zcash / Sui / TON is still pending (see Roadmap).
 
 ## Quick start
 
@@ -95,8 +95,9 @@ vite.config.ts                 # Three entry points: popup / sidepanel / backgro
 - [x] Multi-chain address derivation and message signing (Ethereum / Bitcoin / Zcash / Solana / Sui / TON)
 - [x] Zcash transparent address (`t1`) derivation
 - [x] EVM native-token transfers (Base / Arbitrum / BNB Chain, EIP-1559)
+- [x] Solana native SOL transfers (chain signature)
 - [x] Cross-chain swap / bridge via NEAR Intents 1Click API
-- [ ] Chain-signature transactions for the remaining chains (Bitcoin / Zcash / Solana / Sui / TON)
+- [ ] Chain-signature transactions for the remaining chains (Bitcoin / Zcash / Sui / TON)
 - [ ] Zcash transparent transactions (Zcash-specific sighash, `t1`/`t3` encoding, Zcash RPC)
 - [ ] Mainnet named-account creation (fund a new `.near` account with existing NEAR)
 - [ ] More chains and assets (`omni-transaction-rs` or an equivalent transaction builder)
