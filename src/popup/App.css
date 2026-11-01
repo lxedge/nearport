@@ -11,6 +11,7 @@ body {
   background: var(--bg);
   color: var(--fg);
   font-size: 14px;
+  -webkit-font-smoothing: antialiased;
 }
 
 /* Chrome side panel: fill the panel instead of the fixed popup dimensions. */
@@ -37,20 +38,30 @@ body.sidepanel {
 .tab-bar {
   flex-shrink: 0;
   display: flex;
+  gap: 4px;
+  padding: 8px 12px 10px;
   border-top: 1px solid var(--border);
-  background: var(--bg);
+  background: color-mix(in srgb, var(--bg) 88%, transparent);
+  backdrop-filter: blur(12px);
 }
 
 .tab {
   flex: 1;
-  padding: 12px 0;
+  padding: 9px 0;
   font-size: 13px;
   font-weight: 600;
   color: var(--muted);
+  border-radius: 10px;
+  transition: color 0.15s ease, background 0.15s ease;
+}
+
+.tab:hover {
+  color: var(--fg);
 }
 
 .tab.active {
-  color: var(--accent);
+  color: var(--accent-ink);
+  background: var(--accent-soft);
 }
 
 button {
@@ -59,7 +70,8 @@ button {
   border: none;
   background: none;
   color: inherit;
-  transition: filter 0.15s ease, border-color 0.15s ease, opacity 0.15s ease;
+  transition: filter 0.15s ease, border-color 0.15s ease, opacity 0.15s ease,
+    background 0.15s ease, transform 0.1s ease;
 }
 
 button:disabled {
@@ -68,37 +80,47 @@ button:disabled {
 }
 
 button.back {
-  padding: 4px 10px;
-  font-size: 16px;
+  padding: 7px 11px;
+  font-size: 15px;
+  line-height: 1;
   color: var(--muted);
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: 10px;
+  background: var(--surface);
 }
 
 button.back:hover {
   color: var(--fg);
+  border-color: var(--muted);
 }
 
 button.primary,
 button.secondary {
   width: 100%;
-  padding: 12px 16px;
-  border-radius: 10px;
+  padding: 13px 16px;
+  border-radius: 12px;
   font-weight: 600;
 }
 
 button.primary {
-  background: var(--accent);
+  background: linear-gradient(180deg, #17f5a5 0%, var(--accent) 100%);
   color: var(--accent-fg);
+  box-shadow: 0 4px 16px rgba(0, 236, 151, 0.22);
 }
 
 button.primary:hover:not(:disabled) {
-  filter: brightness(1.08);
+  filter: brightness(1.06);
+  box-shadow: 0 6px 20px rgba(0, 236, 151, 0.3);
+}
+
+button.primary:active:not(:disabled) {
+  transform: translateY(1px);
 }
 
 button.secondary {
   border: 1px solid var(--border);
   color: var(--fg);
+  background: var(--surface);
 }
 
 button.secondary:hover:not(:disabled) {
@@ -108,11 +130,13 @@ button.secondary:hover:not(:disabled) {
 /* "Open side panel" button, shown in headers across screens. */
 .panel-btn {
   margin-left: auto;
-  padding: 6px 10px;
-  font-size: 16px;
-  color: var(--accent);
+  padding: 8px 11px;
+  font-size: 15px;
+  line-height: 1;
+  color: var(--accent-ink);
   border: 1px solid var(--accent-border);
-  border-radius: 8px;
+  border-radius: 10px;
+  background: var(--surface);
 }
 
 .panel-btn:hover {

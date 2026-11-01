@@ -74,7 +74,7 @@
 }
 
 .addr-row.active .addr-value {
-  color: var(--accent);
+  color: var(--accent-ink);
 }
 
 .addr-copy {

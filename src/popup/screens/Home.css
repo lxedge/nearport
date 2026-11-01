@@ -3,7 +3,7 @@
   display: flex;
   flex-direction: column;
   padding: 16px;
-  gap: 12px;
+  gap: 14px;
   overflow-y: auto;
 }
 
@@ -20,6 +20,7 @@
   min-width: 0;
   flex: 1;
   text-align: left;
+  padding: 2px 0;
 }
 
 .chevron {
@@ -29,16 +30,16 @@
 }
 
 .avatar {
-  width: 36px;
-  height: 36px;
+  width: 38px;
+  height: 38px;
   flex-shrink: 0;
   display: grid;
   place-items: center;
   font-size: 18px;
-  color: var(--accent);
+  color: var(--accent-ink);
   background: var(--accent-soft);
   border: 1px solid var(--accent-border);
-  border-radius: 10px;
+  border-radius: 12px;
 }
 
 .account-meta {
@@ -61,11 +62,13 @@
 }
 
 .settings-btn {
-  padding: 6px 10px;
-  font-size: 16px;
+  padding: 8px 11px;
+  font-size: 15px;
+  line-height: 1;
   color: var(--muted);
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: 10px;
+  background: var(--surface);
 }
 
 .settings-btn:hover {
@@ -74,35 +77,42 @@
 }
 
 .balance {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 16px;
+  position: relative;
+  overflow: hidden;
+  border: 1px solid var(--accent-border);
+  border-radius: 16px;
+  padding: 20px;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 6px;
+  background:
+    radial-gradient(120% 140% at 85% -20%, rgba(0, 236, 151, 0.16), transparent 55%),
+    linear-gradient(160deg, var(--surface-2) 0%, var(--surface) 60%);
+  box-shadow: var(--shadow-card);
 }
 
 .balance .label {
   font-size: 11px;
   text-transform: uppercase;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.08em;
   color: var(--muted);
 }
 
 .balance-row {
   display: flex;
   align-items: baseline;
-  gap: 6px;
+  gap: 8px;
 }
 
 .amount {
-  font-size: 28px;
-  font-weight: 650;
+  font-size: 32px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
 }
 
 .unit {
-  font-size: 13px;
+  font-size: 14px;
+  font-weight: 600;
   color: var(--muted);
 }
 
@@ -117,16 +127,39 @@
 
 .quick-actions {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(3, 1fr);
   gap: 10px;
 }
 
 .quick-actions button {
-  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 7px;
+  padding: 14px 6px;
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: 14px;
   color: var(--fg);
   font-weight: 600;
+  font-size: 12px;
+  background: var(--surface);
+  box-shadow: var(--shadow-card);
+}
+
+.quick-actions button:hover {
+  border-color: var(--accent-border);
+  background: var(--surface-2);
+}
+
+.quick-actions .qa-icon {
+  width: 26px;
+  height: 26px;
+  display: grid;
+  place-items: center;
+  font-size: 16px;
+  color: var(--accent-ink);
+  background: var(--accent-soft);
+  border-radius: 8px;
 }
 
 .breakdown {
@@ -140,14 +173,15 @@
   align-items: center;
   justify-content: space-between;
   gap: 10px;
-  padding: 10px 12px;
+  padding: 11px 13px;
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: 12px;
 }
 
 .account-row.active {
   border-color: var(--accent-border);
+  background: var(--accent-soft);
 }
 
 .account-row-id {
@@ -160,7 +194,7 @@
 }
 
 .account-row.active .account-row-id {
-  color: var(--accent);
+  color: var(--accent-ink);
 }
 
 .account-row-balance {
@@ -179,7 +213,7 @@
 .tokens .label {
   font-size: 11px;
   text-transform: uppercase;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.08em;
   color: var(--muted);
 }
 
@@ -192,16 +226,20 @@
 .token-row {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 10px 12px;
+  gap: 11px;
+  padding: 11px 13px;
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: 12px;
+}
+
+.token-row:hover {
+  border-color: var(--muted);
 }
 
 .token-icon {
-  width: 32px;
-  height: 32px;
+  width: 34px;
+  height: 34px;
   flex-shrink: 0;
   border-radius: 50%;
   object-fit: cover;
@@ -211,9 +249,10 @@
   display: grid;
   place-items: center;
   background: var(--surface-2);
+  border: 1px solid var(--border);
   color: var(--muted);
   font-size: 14px;
-  font-weight: 600;
+  font-weight: 700;
 }
 
 .token-meta {

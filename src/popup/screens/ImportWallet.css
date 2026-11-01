@@ -48,7 +48,7 @@
 }
 
 .seed-input:focus-within {
-  border-color: var(--accent);
+  border-color: var(--accent-ink);
 }
 
 .seed-input .index {

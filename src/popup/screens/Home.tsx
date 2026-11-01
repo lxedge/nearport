@@ -162,9 +162,18 @@ export default function Home({
       )}
 
       <section className="quick-actions">
-        <button type="button" onClick={onOpenSend}>Send</button>
-        <button type="button" onClick={onOpenSwap}>Swap</button>
-        <button type="button" onClick={onOpenReceive}>Receive</button>
+        <button type="button" onClick={onOpenSend}>
+          <span className="qa-icon">↑</span>
+          Send
+        </button>
+        <button type="button" onClick={onOpenSwap}>
+          <span className="qa-icon">⇄</span>
+          Swap
+        </button>
+        <button type="button" onClick={onOpenReceive}>
+          <span className="qa-icon">↓</span>
+          Receive
+        </button>
       </section>
 
       <section className="tokens">

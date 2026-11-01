@@ -21,7 +21,7 @@
   display: grid;
   place-items: center;
   font-size: 32px;
-  color: var(--accent);
+  color: var(--accent-ink);
   background: var(--accent-soft);
   border: 1px solid var(--accent-border);
   border-radius: 18px;
@@ -52,7 +52,7 @@
 }
 
 .unlock input:focus {
-  border-color: var(--accent);
+  border-color: var(--accent-ink);
 }
 
 .unlock input::placeholder {
