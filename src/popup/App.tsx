@@ -11,6 +11,7 @@ import Send from './screens/Send'
 import Swap from './screens/Swap'
 import History from './screens/History'
 import ChainSignatures from './screens/ChainSignatures'
+import DerivationPaths from './screens/DerivationPaths'
 import ExportWallet from './screens/ExportWallet'
 import Settings from './screens/Settings'
 import { useWallet } from './useWallet'
@@ -28,6 +29,7 @@ type Screen =
   | 'swap'
   | 'history'
   | 'chainsig'
+  | 'derivationPaths'
   | 'export'
   | 'settings'
 
@@ -155,6 +157,14 @@ export default function App() {
         onBack={() => setScreen('settings')}
       />
     )
+  } else if (screen === 'derivationPaths') {
+    body = (
+      <DerivationPaths
+        chainPaths={chainPaths}
+        onSetChainPath={setChainPath}
+        onBack={() => setScreen('settings')}
+      />
+    )
   } else if (screen === 'export') {
     body = <ExportWallet seedPhrase={seedPhrase} onBack={() => setScreen('settings')} />
   } else if (screen === 'settings') {
@@ -178,8 +188,7 @@ export default function App() {
         onOpenChainSig={() => setScreen('chainsig')}
         onClaimTokens={claimTokens}
         onOpenExport={() => setScreen('export')}
-        chainPaths={chainPaths}
-        onSetChainPath={setChainPath}
+        onOpenDerivationPaths={() => setScreen('derivationPaths')}
       />
     )
   } else if (screen === 'swap') {
