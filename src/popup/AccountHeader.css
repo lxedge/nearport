@@ -6,12 +6,19 @@
   padding: 16px 16px 0;
 }
 
+.account-hover {
+  position: relative;
+  min-width: 0;
+  max-width: 100%;
+  display: flex;
+  align-items: center;
+}
+
 .account-toggle {
   display: flex;
   align-items: center;
   gap: 10px;
   min-width: 0;
-  flex: 1;
   text-align: left;
   padding: 2px 0;
 }

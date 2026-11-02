@@ -26,33 +26,35 @@ export default function AccountHeader({
   const [menuOpen, setMenuOpen] = useState(false)
 
   return (
-    <header
-      className="account"
-      onMouseEnter={() => setMenuOpen(true)}
-      onMouseLeave={() => setMenuOpen(false)}
-    >
-      <button
-        type="button"
-        className="account-toggle"
-        aria-label="View all addresses"
-        title="View all addresses"
+    <header className="account">
+      <div
+        className="account-hover"
+        onMouseEnter={() => setMenuOpen(true)}
+        onMouseLeave={() => setMenuOpen(false)}
       >
-        <span className="account-meta">
-          <span className="account-id">
-            {/^[0-9a-f]{64}$/.test(activeAccountId)
-              ? `${activeAccountId.slice(0, 8)}…${activeAccountId.slice(-6)}`
-              : activeAccountId}
+        <button
+          type="button"
+          className="account-toggle"
+          aria-label="View all addresses"
+          title="View all addresses"
+        >
+          <span className="account-meta">
+            <span className="account-id">
+              {/^[0-9a-f]{64}$/.test(activeAccountId)
+                ? `${activeAccountId.slice(0, 8)}…${activeAccountId.slice(-6)}`
+                : activeAccountId}
+            </span>
           </span>
-        </span>
-      </button>
-      {menuOpen && (
-        <AccountMenu
-          network={network}
-          accounts={accounts}
-          activeAccountId={activeAccountId}
-          chainPaths={chainPaths}
-        />
-      )}
+        </button>
+        {menuOpen && (
+          <AccountMenu
+            network={network}
+            accounts={accounts}
+            activeAccountId={activeAccountId}
+            chainPaths={chainPaths}
+          />
+        )}
+      </div>
       <button
         type="button"
         className="panel-btn"

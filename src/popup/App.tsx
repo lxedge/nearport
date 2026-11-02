@@ -137,7 +137,14 @@ export default function App() {
 
   let body: JSX.Element
   if (screen === 'receive') {
-    body = <Receive accountId={activeAccountId!} onBack={() => setScreen('home')} />
+    body = (
+      <Receive
+        accountId={activeAccountId!}
+        network={network}
+        chainPaths={chainPaths}
+        onBack={() => setScreen('home')}
+      />
+    )
   } else if (screen === 'chainsig') {
     body = (
       <ChainSignatures
